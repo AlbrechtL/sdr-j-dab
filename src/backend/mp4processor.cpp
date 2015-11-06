@@ -202,7 +202,7 @@ int32_t		tmp		= 0;
 	      if ((au_start [3] >= au_start [4]) ||
 	          (au_start [2] >= au_start [3]) ||
 	          (au_start [1] >= au_start [2])) {
-	         fprintf (stderr, "serious error in frame\n");
+//	         fprintf (stderr, "serious error in frame\n");
 	         return false;
 	      }
 	      break;
@@ -214,7 +214,7 @@ int32_t		tmp		= 0;
 	                     (frameBytes [bo + 4] >> 4);
 	      au_start [2] = 110 *  (bitRate / 8);
 	      if ((au_start [1] >= au_start [2])) {
-	         fprintf (stderr, "serious error in frame\n");
+//	         fprintf (stderr, "serious error in frame\n");
 	         return false;
 	      }
 	      break;
@@ -238,7 +238,7 @@ int32_t		tmp		= 0;
 	          (au_start [3] >= au_start [4]) ||
 	          (au_start [2] >= au_start [3]) ||
 	          (au_start [1] >= au_start [2])) {
-	         fprintf (stderr, "serious error in frame\n");
+//	         fprintf (stderr, "serious error in frame\n");
 	         return false;
 	      }
 	      break;
@@ -253,7 +253,7 @@ int32_t		tmp		= 0;
 	      au_start [3] = 110 * (bitRate / 8);
 	      if ((au_start [2] >= au_start [3]) ||
 	          (au_start [1] >= au_start [2])) {
-	         fprintf (stderr, "serious error in frame\n");
+//	         fprintf (stderr, "serious error in frame\n");
 	         return false;
 	      }
 	      break;
@@ -282,10 +282,15 @@ int32_t		tmp		= 0;
 //
 //	The crc takes the two last bytes from the au vector
 	   if (au_start [i + 1] < au_start [i]) {
-	      fprintf (stderr, "%d %d\n", au_start [i + 1], au_start [i]);
+//	      fprintf (stderr, "%d %d\n", au_start [i + 1], au_start [i]);
 	      return false;
 	   }
 	   aac_frame_length = au_start [i + 1] - au_start [i] - 2;
+	   if ((aac_frame_length >= 960) || (aac_frame_length < 0)) {
+//	      fprintf (stderr, "serious error in frame, framelength = %d\n",
+//	                            aac_frame_length);
+	      return false;
+	   }
 //	but first the crc check
 	   if (dabPlus_crc (&outVector [au_start [i]],
 	                    aac_frame_length)) {
