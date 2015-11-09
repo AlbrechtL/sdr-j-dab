@@ -16,6 +16,30 @@ setting
 CONFIG	+= spectrum 
 will configure a shown spectrum in
 
+UBUNTU 1404  and 1504
+
+The software was developed under Fedora (21 and 22). To compile
+under Ubuntu the first culprit is the package portaudio.
+By default the portaudio 18 version is installed, you definitely
+need portaudio-19 which is available as portaudio 2.
+
+Ubuntu 14.04. Note that you better run Qt4 and qwt 6.??? It seems
+very hard to get a decent combination Qt5 / qwt6 running.
+The software can easily be compiled with Qt4.
+In the file "sdr-j-dabreceiver-0.99.pro" ensure that the lines
+are commented/uncommented as:
+
+LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu
+#LIBS		+= -lqwt-qt5 -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl  # fedora
+
+b. Ubuntu 15.04. Qt5 and qwt6 are available in the regular repositories,
+however, for some unclear reason, the qwt needs
+
+#define	QT_STATIC_CONST
+
+It's definition is available - though commented out - in the file
+"includes/dab-constants.h"
+
 Building:
 As usual, a pre-compiled version for 64 bits Windows exists, and for Linux
 one has to collect libraries and do the building oneself.

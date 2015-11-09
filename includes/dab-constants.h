@@ -36,7 +36,7 @@
 #include	<unistd.h>
 
 //
-//	It seesm that the ubuntu 15.04 qwt needs QT_STATIC_CONST to be
+//	It seems that the ubuntu 15.04 qwt needs QT_STATIC_CONST to be
 //	defined
 //#define	QT_STATIC_CONST
 
