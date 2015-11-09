@@ -38,9 +38,7 @@
 //
 //	It seesm that the ubuntu 15.04 qwt needs QT_STATIC_CONST to be
 //	defined
-//#if defined QWT_VERSION && ((QWT_VERSION >> 8) > 0x0601)
-#define	QT_STATIC_CONST
-//#endif
+//#define	QT_STATIC_CONST
 
 #ifndef	__FREEBSD__
 #include	<malloc.h>
