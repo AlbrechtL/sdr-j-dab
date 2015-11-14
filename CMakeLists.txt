@@ -12,7 +12,7 @@ add_definitions ( -Wall)
 #
 #	if you want support for any of these devices, uncomment the line
 	set(SDRPLAY true)
-	set(AIRSPY true)
+#	set(AIRSPY true)
 	set(DABSTICK true)
 #	set(RTLTCP true)
 	set(SPECTRUM true)
@@ -413,8 +413,7 @@ add_definitions ( -Wall)
 	endif (RTLTCP)
 
 	QT5_WRAP_UI (UIS ${${objectName}_UIS}
-	             ./src/input/filereader-widget.ui 
-	             ./src/input/airspy-old/airspy-widget.ui )
+	             ./src/input/filereader-widget.ui )
 
 	include_directories (
 	          ${SDRPLAY_INCLUDES}
