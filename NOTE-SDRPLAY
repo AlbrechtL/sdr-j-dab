@@ -1,0 +1,7 @@
+Recently sdrplay presents a new API 1.7, addressable through a different
+library name
+
+define
+#DEFINE	SDRPLAY_LIBRARY_NEW 
+for the new one, otherwise it is assumed that an older version exists
+

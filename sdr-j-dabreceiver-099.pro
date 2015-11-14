@@ -204,6 +204,7 @@ sdrplay {
 	                   ./src/input/sdrplay/sdrplay-loader.cpp \
 	                   ./src/input/sdrplay/sdrplay-worker.cpp 
 	FORMS		+= ./src/input/sdrplay/sdrplay-widget.ui
+	DEFINES		+= SDRPLAY_LIBRARY_NEW
 }
 #
 # airspy support 
