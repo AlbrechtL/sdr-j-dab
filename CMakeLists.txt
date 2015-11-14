@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION 2.8.11 )
 set (CMAKE_BUILD_TYPE Release )
 set (objectName sdr-j-dabreceiver-0.99)
-set ( CMAKE_INSTALL_PREFIX ../ )
+set ( CMAKE_INSTALL_PREFIX . )
 add_definitions ( -Wall)
 ######################################################################
 #       R E A D  T H I S
@@ -411,6 +411,36 @@ add_definitions ( -Wall)
 	   set (RTLTCP_lib Qt5::Network)
 	   add_definitions (-DHAVE_RTL_TCP)
 	endif (RTLTCP)
+
+	if (SPECTRUM)
+	   set (${objectName}_UIS
+	        ${${objectName}_UIS}
+	        ./optional-scope/scopewidget.ui 
+	   )
+
+	   set (${objectName}_MOCS
+	        ${${objectName}_MOCS}
+	        ./optional-scope/spectrum-handler.h
+	   )
+
+	   include_directories (
+	      ./optional-scope
+	   )
+
+	   set ($(objectName)_HDRS
+	        ${${objectName}_HDRS}
+	        ./optional-scope/spectrum-handler.h
+	   )
+
+	   set (${objectName}_SRCS
+	        ${${objectName}_SRCS}
+	        ./optional-scope/spectrum-handler.cpp
+	   )
+
+	   add_definitions (-DHAVE_SPECTRUM)
+	endif (SPECTRUM)
+
+
 
 	QT5_WRAP_UI (UIS ${${objectName}_UIS}
 	             ./src/input/filereader-widget.ui )

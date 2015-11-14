@@ -41,7 +41,7 @@ int32_t	i;
 	   this	-> size		= 16384;
 	else
 	   this	-> size		= size;
-	_O_Buffer		= new RingBuffer<float>(2 * 32768);
+	_O_Buffer		= new RingBuffer<float>(16 * 32768);
 	portAudio		= false;
 	writerRunning		= false;
 
