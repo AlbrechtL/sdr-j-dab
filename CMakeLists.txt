@@ -12,7 +12,7 @@ add_definitions ( -Wall)
 #
 #	if you want support for any of these devices, uncomment the line
 	set(SDRPLAY true)
-#	set(AIRSPY true)
+	set(AIRSPY true)
 	set(DABSTICK true)
 #	set(RTLTCP true)
 	set(SPECTRUM true)

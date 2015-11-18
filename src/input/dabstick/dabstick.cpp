@@ -174,17 +174,17 @@ int16_t	i;
 
 	_I_Buffer		= new RingBuffer<uint8_t>(1024 * 1024);
 	dabstickSettings	-> beginGroup ("dabstickSettings");
-	externalGain	-> setMaximum (gainsCount);
-	externalGain -> setValue (dabstickSettings -> value ("externalGain", 10). toInt ());
+	gainSlider	-> setMaximum (gainsCount);
+	gainSlider	-> setValue (dabstickSettings -> value ("gainSlider", 10). toInt ());
 	f_correction -> setValue (dabstickSettings -> value ("f_correction", 0). toInt ());
 	KhzOffset	-> setValue (dabstickSettings -> value ("KhzOffset", 0). toInt ());
 	rateAdjustment	-> setValue (dabstickSettings -> value ("rateAdjustment", 0). toInt());
 	dabstickSettings	-> endGroup ();
 	set_fCorrection	(f_correction	-> value ());
-	setExternalGain (externalGain	-> value ());
+	setExternalGain (gainSlider	-> value ());
 	set_KhzOffset	(KhzOffset	-> value ());
 	adjustRate	(rateAdjustment -> value ());
-	connect (externalGain, SIGNAL (valueChanged (int)),
+	connect (gainSlider, SIGNAL (valueChanged (int)),
 	         this, SLOT (setExternalGain (int)));
 	connect (f_correction, SIGNAL (valueChanged (int)),
 	         this, SLOT (set_fCorrection  (int)));
@@ -192,6 +192,8 @@ int16_t	i;
 	         this, SLOT (set_KhzOffset (int)));
 	connect (rateAdjustment, SIGNAL (valueChanged (int)),
 	         this, SLOT (adjustRate (int)));
+	connect (checkAgc, SIGNAL (stateChanged (int)),
+	         this, SLOT (setAgc (int)));
 	*success 		= true;
 	return;
 
@@ -211,8 +213,8 @@ err:
 
 	dabStick::~dabStick	(void) {
 	dabstickSettings	-> beginGroup ("dabstickSettings");
-	dabstickSettings	-> setValue ("externalGain", 
-	                                      externalGain -> value ());
+	dabstickSettings	-> setValue ("gainSlider", 
+	                                      gainSlider -> value ());
 	dabstickSettings	-> setValue ("f_correction",
 	                                      f_correction -> value ());
 	dabstickSettings	-> setValue ("KhzOffset",
@@ -295,6 +297,7 @@ static int	oldGain	= 0;
 
 	oldGain	= gain;
 	rtlsdr_set_tuner_gain (device, gains [gainsCount - gain]);
+	showGain	-> display (gainsCount - gain);
 }
 //
 //	correction is in Hz
@@ -383,6 +386,13 @@ bool	dabStick::load_rtlFunctions (void) {
 	   return false;
 	}
 
+	rtlsdr_set_agc_mode =
+	    (pfnrtlsdr_set_agc_mode)GETPROCADDRESS (Handle, "rtlsdr_set_agc_mode");
+	if (rtlsdr_set_agc_mode == NULL) {
+	   fprintf (stderr, "Could not find rtlsdr_set_agc_mode\n");
+	   return false;
+	}
+	
 	rtlsdr_get_tuner_gains		= (pfnrtlsdr_get_tuner_gains)
 	                     GETPROCADDRESS (Handle, "rtlsdr_get_tuner_gains");
 	if (rtlsdr_get_tuner_gains == NULL) {
@@ -493,3 +503,11 @@ int16_t	dabStick::bitDepth	(void) {
 void	dabStick::adjustRate	(int ad) {
 	(void)this -> rtlsdr_set_sample_rate (device, inputRate + ad);
 }
+
+void	dabStick::setAgc	(int state) {
+	if (checkAgc -> isChecked ())
+	   (void)rtlsdr_set_agc_mode (device, 1);
+	else
+	   (void)rtlsdr_set_agc_mode (device, 1);
+}
+

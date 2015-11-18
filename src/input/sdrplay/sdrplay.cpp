@@ -77,7 +77,7 @@ float	ver;
 	vfoOffset	= 0;
 
 	sdrplaySettings		-> beginGroup ("sdrplaySettings");
-	externalGain 		-> setValue (
+	gainSlider 		-> setValue (
 	            sdrplaySettings -> value ("externalGain", 10). toInt ());
 	f_correction		-> setValue (
 	            sdrplaySettings -> value ("f_correction", 0). toInt ());
@@ -85,9 +85,9 @@ float	ver;
 	            sdrplaySettings -> value ("KhzOffset", 0). toInt ());
 	sdrplaySettings	-> endGroup ();
 
-	setExternalGain	(externalGain	-> value ());
+	setExternalGain	(gainSlider	-> value ());
 	set_KhzOffset	(KhzOffset	-> value ());
-	connect (externalGain, SIGNAL (valueChanged (int)),
+	connect (gainSlider, SIGNAL (valueChanged (int)),
 	         this, SLOT (setExternalGain (int)));
 	connect (KhzOffset, SIGNAL (valueChanged (int)),
 	         this, SLOT (set_KhzOffset (int)));
@@ -96,7 +96,7 @@ float	ver;
 
 	sdrplay::~sdrplay	(void) {
 	sdrplaySettings	-> beginGroup ("sdrplaySettings");
-	sdrplaySettings	-> setValue ("externalGain", externalGain -> value ());
+	sdrplaySettings	-> setValue ("externalGain", gainSlider -> value ());
 	sdrplaySettings -> setValue ("f_correction", f_correction -> value ());
 	sdrplaySettings -> setValue ("KhzOffset", KhzOffset -> value ());
 	sdrplaySettings	-> endGroup ();
@@ -190,6 +190,7 @@ void	sdrplay::setExternalGain	(int newGain) {
 	if (theWorker != NULL)
 	   theWorker -> setExternalGain (newGain);
 	currentGain = newGain;
+	gainDisplay	-> display (currentGain);
 	return;
 }
 
