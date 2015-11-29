@@ -654,12 +654,16 @@ int16_t		i;
 	   int16_t appType = getBits (d, lOffset, 11);
 	   int16_t length	= getBits (d, lOffset + 11, 5);
 	   lOffset += (11 + 5 + 8 * length);
+//	   fprintf (stderr, "appType voor SId %d SCIds (%d) = %d (length %d)\n",
+//	                      SId, SCIds, length, appType);
 	   switch (appType) {
 	      case 0x000:		// reserved for future use
 	      case 0x001:		// not used
 	         break;
 
 	      case 0x002:		// MOT slideshow
+	         break;
+
 	      case 0x003:		// MOT Broadcast Web Site
 	      case 0x004:		// TPEG
 	      case 0x005:		// DGPS

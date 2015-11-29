@@ -45,12 +45,14 @@ int32_t	i;
 	this	-> my_mscHandler	= msc;
 	this	-> my_ficHandler	= fic;
 	dumping				= false;
+	dumpIndex			= 0;
 //
 	ofdmBuffer			= new DSPCOMPLEX [76 * T_s];
 	ofdmBufferIndex			= 0;
 	ibits				= new int16_t [2 * params -> K];
 	ofdmSymbolCount			= 0;
 	tokenCount			= 0;
+	sampleCnt			= 0;
 	tokenLength			= 0;
 	avgTokenLength			= params -> T_F;
 	phaseSynchronizer	= new phaseReference (params, threshold);
@@ -132,10 +134,12 @@ DSPCOMPLEX temp;
 	theRig -> getSamples (&temp, 1);
 	bufferContent --;
 	if (dumping) {
-	   float f [2];
-	   f [0] = real (temp);
-	   f [1] = imag (temp);
-	   sf_writef_float (dumpFile, f, 1);
+	   dumpBuffer [2 * dumpIndex] = real (temp);
+	   dumpBuffer [2 * dumpIndex + 1] = imag (temp);
+	   if ( ++dumpIndex >= DUMPSIZE / 2) {
+	      sf_writef_float (dumpFile, dumpBuffer, dumpIndex);
+	      dumpIndex = 0;
+	   }
 	}
 //
 //	OK, we have a sample!!
@@ -151,7 +155,7 @@ DSPCOMPLEX temp;
 #define	N	7
 	sampleCnt	++;
 	tokenLength	++;
-	if (++ sampleCnt > INPUT_RATE / N) {
+	if (sampleCnt > INPUT_RATE / N) {
 	   show_fineCorrector	(fineCorrector);
 	   show_coarseCorrector	(coarseCorrector / KHz (1));
 	   sampleCnt = 0;
@@ -184,11 +188,13 @@ int32_t		i;
 	n	= theRig -> getSamples (v, n);
 	bufferContent -= n;
 	if (dumping) {
-	   float f [2];
 	   for (i = 0; i < n; i ++) {
-	      f [0] = real (v [i]);
-	      f [1] = imag (v [i]);
-	      sf_writef_float (dumpFile, f, 1);
+	      dumpBuffer [2 * dumpIndex] = real (v [i]);
+	      dumpBuffer [2 * dumpIndex + 1] = imag (v [i]);
+	      if (++dumpIndex >= DUMPSIZE / 2) {
+	         sf_writef_float (dumpFile, dumpBuffer, dumpIndex);
+	         dumpIndex = 0;
+	      }
 	   }
 	}
 //
@@ -219,56 +225,6 @@ int32_t		i;
 	}
 }
 
-void	ofdm_processor::getSamples (DSPCOMPLEX *v, int16_t n) {
-int32_t		i;
-
-	if (!running)
-	   throw 21;
-	if (n > bufferContent) {
-	   bufferContent = theRig -> Samples ();
-	   while ((bufferContent < n) && running) {
-	      usleep (10);
-	      bufferContent = theRig -> Samples (); 
-	   }
-	}
-	if (!running)	
-	   throw 20;
-//
-//	so here, bufferContent >= n
-	n	= theRig -> getSamples (v, n);
-	bufferContent -= n;
-	if (dumping) {
-	   float f [2];
-	   for (i = 0; i < n; i ++) {
-	      f [0] = real (v [i]);
-	      f [1] = imag (v [i]);
-	      sf_writef_float (dumpFile, f, 1);
-	   }
-	}
-//
-//	OK, we have samples!!
-	for (i = 0; i < n; i ++) {
-#ifdef	HAVE_SPECTRUM
-	   if (localCounter < bufferSize) 
-	      localBuffer [localCounter ++]	= v [i];
-#endif
-	   sLevel	= 0.00001 * jan_abs (v [i]) + (1 - 0.00001) * sLevel;
-	}
-
-	sampleCnt	+= n;
-	tokenLength	+= n;
-	if (sampleCnt > INPUT_RATE / N) {
-	   show_fineCorrector	(fineCorrector);
-	   show_coarseCorrector	(coarseCorrector / KHz (1));
-	   sampleCnt = 0;
-#ifdef	HAVE_SPECTRUM
-	   spectrumBuffer -> putDataIntoBuffer (localBuffer, bufferSize);
-	   emit showSpectrum (bufferSize);
-	   localCounter	= 0;
-#endif
-	}
-}
-//
 //	Note for the reader:
 //	currentStrength should read (50 * currentStrength)
 //
@@ -505,6 +461,7 @@ void	ofdm_processor::startDumping	(SNDFILE *f) {
 //	do not change the order here.
 	dumpFile 	= f;
 	dumping		= true;
+	dumpIndex	= 0;
 }
 
 void	ofdm_processor::stopDumping	(void) {

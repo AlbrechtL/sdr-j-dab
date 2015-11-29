@@ -39,6 +39,7 @@
 #include	"virtual-input.h"
 #include	"ringbuffer.h"
 
+#define		DUMPSIZE	8192
 class	RadioInterface;
 class	common_fft;
 
@@ -67,6 +68,8 @@ private:
 	bool		running;
 	int16_t		gain;
 	bool		dumping;
+	int16_t		dumpIndex;
+	float		dumpBuffer [DUMPSIZE];
 	SNDFILE		*dumpFile;
 	virtualInput	*theRig;
 	DabParams	*params;
@@ -98,7 +101,7 @@ private:
 	int32_t		inputPointer;
 	DSPCOMPLEX	getSample	(int32_t);
 	void		getSamples	(DSPCOMPLEX *, int16_t, int32_t);
-	void		getSamples	(DSPCOMPLEX *, int16_t);
+//	void		getSamples	(DSPCOMPLEX *, int16_t);
 virtual	void		run		(void);
 	int32_t		bufferContent;
 #ifdef	HAVE_SPECTRUM

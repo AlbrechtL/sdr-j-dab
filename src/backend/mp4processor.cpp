@@ -33,8 +33,9 @@
 //
 #include	"charsets.h"
 #include	"faad-decoder.h"
+#include	"pad-handler.h"
 
-//	simple, inline coded, crc checker
+//	simple crc checker
 //
 bool	dabPlus_crc (uint8_t *msg, int16_t len) {
 int i, j;
@@ -59,42 +60,22 @@ uint16_t	genpoly		= 0x1021;
 	return (crc ^ accumulator) == 0;
 }
 //
-//	and some simple "bit-setter" functions
-static inline
-void	setBit (uint8_t x [], uint8_t bit, int32_t pos) {
-int16_t	iByte;
-int16_t	iBit;
-
-	iByte	= pos / 8;
-	iBit	= pos % 8;
-	x [iByte] = (x [iByte] & (~(1 << (7 - iBit)))) |
-	            (bit << (7 - iBit));
-}
-
-static inline
-void	setBits (uint8_t x[], uint32_t bits,
-	         int32_t startPosition, int32_t numBits) {
-int32_t i;
-uint8_t	bit;
-
-	for (i = 0; i < numBits; i ++) {
-	   bit = bits & (1 << (numBits - i - 1)) ? 1 : 0;
-	   setBit (x, bit, startPosition + i);
-	}
-}
-
 //
 //	Now for real
+/**
+  *	\class mp4Processor is the main handler for the aac frames
+  *	the class proper processes input and extracts the aac frames
+  *	that are processed by the "faadDecoder" class
+  */
+
 	mp4Processor::mp4Processor (RadioInterface *mr,
 	                            audioSink *as,
-	                            int16_t bitRate) {
+	                            int16_t bitRate):my_padHandler (mr) {
 int16_t	i;
 
 	myRadioInterface	= mr;
 	connect (this, SIGNAL (show_successRate (int)),
 	         mr, SLOT (show_successRate (int)));
-	connect (this, SIGNAL (showLabel (QString)),
-	         mr, SLOT (showLabel (QString)));
 	ourSink			= as;
 	this	-> bitRate	= bitRate;	// input rate
 
@@ -272,7 +253,7 @@ int32_t		tmp		= 0;
 	}
 //
 //	OK, the result is N * 110 * 8 bits (still single bit per byte!!!)
-//	extract the AU's, and prepare a buffer, sufficiently
+//	extract the AU'si and prepare a buffer, sufficiently
 //	long for conversion to PCM samples
 	for (i = 0; i < num_aus; i ++) {
 	   int16_t	aac_frame_length;
@@ -302,7 +283,7 @@ int32_t		tmp		= 0;
 	              aac_frame_length * sizeof (uint8_t));
 
 	      if (((theAU [0] >> 5) & 07) == 4)
-	         processPAD (theAU);
+	         my_padHandler. processPAD (theAU);
 //
 //	just a few bytes extra, such that the decoder can look
 //	beyond the last byte
@@ -330,170 +311,4 @@ int32_t		tmp		= 0;
 //
 	return true;
 }
-
-//
-//	Temp code. This code should not be here at all
-//	for the time being, i.e. until we figured out
-//	how to deal with PAD's in general, it remains here
-void	mp4Processor::processPAD (uint8_t *theAU) {
-uint8_t buffer [255];
-int16_t	i;
-int16_t	count	= theAU [1];
-//	fprintf (stderr, "theAU [0] = %o %o\n", theAU [0], theAU [1]);
-//	fprintf (stderr, "count = %o\n", count);
-	for (i = 0; i < theAU [1]; i ++)
-	   buffer [i] = theAU [2 + i];
-
-	uint8_t Z_bit		= (buffer [count - 1] & 01);
-	uint8_t	CI_flag		= (buffer [count - 1] >> 1) & 01;
-	uint8_t	f_padType	= (buffer [count - 2] >> 6) & 03;
-	if (f_padType == 00) {
-	   uint8_t x_padInd = (buffer [count - 2] >> 4) & 03;
-	   if (x_padInd == 01) 
-	      handle_shortPAD (buffer, count);
-	   else
-	   if (x_padInd == 02) 
-	      handle_variablePAD (buffer, count, CI_flag);
-	   else
-	      fprintf (stderr, "undefined\n");
-	}
-	else
-	   fprintf (stderr, "F_PAD type ext = %d\n",
-	                           (buffer [count - 2] >> 4) & 03);
-}
-
-static inline
-bool	isOK (uint8_t c) {
-	return c == ' ' ||
-	       ('0' <= c && c <= '9') ||
-	       ('a' <= c && c <= 'z') ||
-	       ('A' <= c && c <= 'Z') ||
-	       c == '.';
-}
-
-static inline
-uint8_t theChar (uint8_t c) {
-	return c;
-	return isOK (c) ? c : ' ';
-}
-//
-//	for now we only deal with dynamic labels
-//
-void	mp4Processor::handle_variablePAD (uint8_t *b, int16_t count, uint8_t CI_flag) {
-int16_t	CI_index = 0;
-uint8_t CI_table [16];
-int16_t	i, j;
-int16_t	base	= count - 2 - 1;	//for the F-pad
-int16_t	length	= 0;
-
-	return;
-	if (CI_flag == 0)
-	   return;
-	while (((b [base] & 037) != 0) && CI_index < 4) {
-	   CI_table [CI_index ++] = b [base];
-	   base -= 1;
-	}
-	base -= 1;
-	for (i = 0; i < CI_index; i ++) {
-	   int16_t ind = CI_table [i] >> 5;
-	   uint8_t appType = CI_table [i] & 037;
-	   if ((appType != 2) && (appType != 3))
-	      return;
-	   int16_t length = ind == 0 ? 4 :
-	                    ind == 1 ? 6 :
-	                    ind == 2 ? 8 :
-	                    ind == 3 ? 12 :
-	                    ind == 4 ? 16 :
-	                    ind == 5 ? 24 :
-	                    ind == 6 ? 32 : 48;
-	   fprintf (stderr, "%d apptype = %d, length = %d\n", i, appType, length);
-	   uint8_t *data = (uint8_t *)alloca (length + 1);
-	   for (j = 0; j < length; j ++)  {
-	      data [j] = b [base - j];
-	   }
-	   data [length] = 0;
-	   if ((appType == 02) || (appType == 03)) {
-	      dynamicLabel (data, length, CI_table [i]);
-	   }
-	   base -= length;
-	   if (base < 0) {
-	      fprintf (stderr, "Hier gaat het fout\n");
-	      return;
-	   }
-	}
-}
-
-void	mp4Processor::handle_shortPAD (uint8_t *b, int16_t count) {
-uint8_t CI	= b [count - 3];
-uint8_t data [4];
-int16_t	i;
-	for (i = 0; i < 3; i ++)
-	   data [i] = b [count - 4 - i];
-	data [3] = 0;
-	if ((CI & 037)  == 02 || (CI & 037) == 03)
-	   dynamicLabel (data, 3, CI);
-}
-
-
-void	mp4Processor::dynamicLabel (uint8_t *data, int16_t length, uint8_t CI) {
-static bool xpadActive = false;
-static QString xpadtext = QString ("");
-static int16_t segmentLength = 0;
-static int16_t segmentno = 0;
-static int16_t clength	= 0;
-int16_t	i;
-
-	if ((CI & 037) == 02) {	// start of segment
-	   if (xpadActive) {
-	      xpadtext. truncate (segmentLength + 1);
-	      addSegment (segmentno, xpadtext);
-	   }
-
-	   xpadtext 	= QString ("");
-	   xpadActive	= true;
-	   uint16_t prefix = (data [0] << 8) | data [1];
-	   uint8_t field_1 = (prefix >> 8) & 017;
-	   uint8_t Cflag   = (prefix >> 12) & 01;
-	   uint8_t first   = (prefix >> 14) & 01;
-	   uint8_t last    = (prefix >> 13) & 01;
-	   if (first) { 
-	      segmentno = 1;
-	      charSet = (prefix >> 4) & 017;
-	   }
-	   else 
-	      segmentno = (prefix >> 4) & 07;
-	   if (Cflag)
-	      dynamicLabelText = QString ("");
-	   else { 
-	      segmentLength = field_1;
-	      clength = length - 2;
-	   }
-	   QString help = toQStringUsingCharset (
-	                        (const char *) &data [2],
-	                           (CharacterSet) charSet);
-	   xpadtext. append (help);
-	}
-	else
-	if (((CI & 037) == 03) && xpadActive) {	
-	   QString help = toQStringUsingCharset (
-	                        (const char *) data,
-	                           (CharacterSet) charSet);
-	   xpadtext. append (help);
-	   clength += length;
-	}
-	else
-	   xpadActive = false;
-}
-
-void	mp4Processor::addSegment (uint16_t segmentno, QString s) {
-static int lastSegment = 0;
-	if (segmentno == 1)
-	   s. prepend (' ');
-	if (dynamicLabelText. length () + s. length () > 60)
-	   dynamicLabelText. remove (1, dynamicLabelText. length () + s. length () - 60);
-	dynamicLabelText. append (s);
-	showLabel (dynamicLabelText);
-	lastSegment = segmentno;
-}
-
 

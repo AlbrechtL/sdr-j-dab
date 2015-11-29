@@ -722,8 +722,8 @@ QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 void	RadioInterface::set_dumping (void) {
 SF_INFO *sf_info	= (SF_INFO *)alloca (sizeof (SF_INFO));
 
-	if (!someStick (myRig -> myIdentity ()))
-	   return;
+//	if (!someStick (myRig -> myIdentity ()))
+//	   return;
 
 	if (sourceDumping) {
 	   the_ofdmProcessor	-> stopDumping ();

@@ -40,7 +40,7 @@ struct timeval	tv;
 	return ((int64_t)tv. tv_sec * 1000000 + (int64_t)tv. tv_usec);
 }
 
-#define	__BUFFERSIZE	8 * 32768
+#define	__BUFFERSIZE	16 * 32768
 
 	wavFiles::wavFiles (QString f, bool *success) {
 SF_INFO *sf_info;

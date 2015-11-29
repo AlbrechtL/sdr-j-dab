@@ -36,6 +36,7 @@
 #include	"firecode-checker.h"
 #include	"rscodec.h"
 #include	<QObject>
+#include	"pad-handler.h"
 
 class	RadioInterface;
 class	faadDecoder;
@@ -50,13 +51,9 @@ public:
 	void		addtoFrame	(uint8_t *, int16_t);
 private:
 	bool		processSuperframe (uint8_t [], int16_t);
-	void		processPAD	  (uint8_t *);
-	void		handle_shortPAD   (uint8_t *, int16_t);
-	void		handle_variablePAD (uint8_t *, int16_t, uint8_t);
-	void		dynamicLabel	  (uint8_t *, int16_t, uint8_t);
-	void		addSegment	  (uint16_t, QString);
 	RadioInterface	*myRadioInterface;
 	audioSink	*ourSink;
+	padHandler	my_padHandler;
 	FILE		*mp4File;
 	int16_t		superFramesize;
 	int16_t		blockFillIndex;
@@ -79,11 +76,8 @@ private:
 	faadDecoder	*aacDecoder;
 	int16_t		frameCount;
 	int16_t		frameErrors;
-	QString		dynamicLabelText;
-	int16_t		charSet;
 signals:
 	void		show_successRate		(int);
-	void		showLabel			(QString);
 };
 
 #endif

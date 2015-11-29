@@ -188,6 +188,8 @@ add_definitions ( -Wall)
 	     ./includes/backend/mp2processor.h
 	     ./includes/backend/faad_decoder.h
 	     ./includes/backend/charsets.h
+	     ./includes/backend/pad-handler.h
+	     ./includes/backend/mot-data.h
 	     ./src/input/virtual-input.h
 	     ./src/input/rawfiles/rawfiles.h
 	     ./src/input/wavfiles/wavfiles.h
@@ -223,6 +225,8 @@ add_definitions ( -Wall)
 	     ./src/backend/dab-processor.cpp
 	     ./src/backend/protTables.cpp
 	     ./src/backend/charsets.cpp
+	     ./src/backend/pad-handler.cpp
+	     ./src/backend/mot-data.cpp
 	     ./src/input/virtual-input.cpp
 	     ./src/input/rawfiles/rawfiles.cpp
 	     ./src/input/wavfiles/wavfiles.cpp
@@ -242,6 +246,7 @@ add_definitions ( -Wall)
 	     ./includes/backend/fib-processor.h
 	     ./includes/backend/mp2processor.h
 	     ./includes/backend/mp4processor.h
+	     ./includes/backend/pad-handler.h
 	     ./includes/scopes-qwt6/scope.h
 	     ./includes/scopes-qwt6/iqdisplay.h
 	     ./src/input/rawfiles/rawfiles.h
