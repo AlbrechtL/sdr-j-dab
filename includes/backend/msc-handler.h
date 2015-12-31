@@ -47,16 +47,22 @@ public:
 		~mscHandler		(void);
 	void	process_mscBlock	(int16_t *, int16_t);
 	void	setMode			(DabParams *);
-	void	setChannel		(int16_t, int16_t, int16_t,
+	void	set_audioChannel	(int16_t, int16_t, int16_t,
 	                                 int16_t, int16_t, int16_t, int16_t,
 	                                 int16_t, int16_t);
+	void	set_dataChannel		(int16_t, int16_t, int16_t,
+	                                 int16_t, int16_t, int16_t,
+	                                 int16_t, uint8_t,
+	                                 uint8_t, int16_t);
 	uint8_t	getMode			(void);
 	int16_t	getChannel		(void);
 	int16_t	getLanguage		(void);
 	int16_t	getType			(void);
+	void	stop			(void);
 	void	stopProcessing		(void);
 	void	setFiles		(FILE *, FILE *);
 private:
+	bool		audioService;	// dataservice if not true
 	bool		concurrencyOn;
 	dabVirtual	*dabHandler;
 	int16_t		*cifVector;
@@ -65,18 +71,26 @@ private:
 	RadioInterface	*myRadioInterface;
 	int16_t		currentChannel;
 	bool		newChannel;
+	int16_t		new_packetAddress;
+	int16_t		new_DSCTy;
 	int16_t		new_startAddr;
 	int16_t		new_Length;
 	int16_t		new_uepFlag;
 	int16_t		new_protLevel;
+	uint8_t		new_DGflag;
 	int16_t		new_bitRate;
 	int16_t		new_language;
 	int16_t		new_type;
+	int16_t		new_FEC_scheme;
+	int16_t		packetAddress;
+	int16_t		DSCTy;
 	int16_t		startAddr;
 	int16_t		Length;
 	int16_t		uepFlag;
 	int16_t		protLevel;
+	uint8_t		DGflag;
 	int16_t		bitRate;
+	int16_t		FEC_scheme;
 	int8_t		dabModus;
 	int8_t		new_dabModus;
 	int16_t		BitsperBlock;

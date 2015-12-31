@@ -69,8 +69,6 @@ int16_t	MP42PCM (uint8_t dacRate, uint8_t sbrFlag,
 	         int16_t mpegSurround,
 	         uint8_t	aacChannelMode,
 	         uint8_t buffer [], int16_t bufferLength) {
-int16_t	len;
-int16_t	i;
 int16_t	samples;
 uint8_t	channels;
 long unsigned int	sample_rate;

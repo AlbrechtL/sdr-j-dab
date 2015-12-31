@@ -183,6 +183,7 @@ add_definitions ( -Wall)
 	     ./includes/backend/firecode-checker.h
 	     ./includes/backend/dab-serial.h
 	     ./includes/backend/dab-concurrent.h
+	     ./includes/backend/msc-datagroup.h
 	     ./includes/backend/dab-processor.h
 	     ./includes/backend/dab-virtual.h
 	     ./includes/backend/mp2processor.h
@@ -221,6 +222,7 @@ add_definitions ( -Wall)
 	     ./src/backend/firecode-checker.cpp
 	     ./src/backend/dab-serial.cpp
 	     ./src/backend/dab-concurrent.cpp
+	     ./src/backend/msc-datagroup.cpp
 	     ./src/backend/dab-virtual.cpp
 	     ./src/backend/dab-processor.cpp
 	     ./src/backend/protTables.cpp

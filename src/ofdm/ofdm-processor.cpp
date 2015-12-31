@@ -24,7 +24,7 @@
 //
 #define syncBufferMask	(2 * 32768 - 1)
 
-	ofdm_processor::ofdm_processor	(virtualInput *theRig,
+	ofdmProcessor::ofdmProcessor	(virtualInput *theRig,
 	                                 DabParams	*p,
 	                                 RadioInterface *mr,
 	                                 mscHandler 	*msc,
@@ -56,10 +56,10 @@ int32_t	i;
 	tokenLength			= 0;
 	avgTokenLength			= params -> T_F;
 	phaseSynchronizer	= new phaseReference (params, threshold);
-	ofdmDecoder		= new ofdm_decoder (params,
-	                                            iqBuffer,
-	                                            phaseSynchronizer -> getTable (),
-	                                            myRadioInterface);
+	my_ofdmDecoder		= new ofdmDecoder (params,
+	                                           iqBuffer,
+	                                           phaseSynchronizer -> getTable (),
+	                                           myRadioInterface);
 	fineCorrector		= 0;	
 	coarseCorrector		= 0;
 	f2Correction		= false;
@@ -93,17 +93,17 @@ int32_t	i;
 	start (QThread::TimeCriticalPriority);
 }
 
-	ofdm_processor::~ofdm_processor	(void) {
+	ofdmProcessor::~ofdmProcessor	(void) {
 	running		= false;	// this will cause an
 	                                // exception to be raised
-	                        	// through the getNextSampleReady
+	                        	// through the getSample functions
 	while (!isFinished ()) {
 	   msleep (1);
 	   running = false;
 	}
 	delete	ofdmBuffer;
 	delete	phaseSynchronizer;
-	delete	ofdmDecoder;
+	delete	my_ofdmDecoder;
 	delete	oscillatorTable;
 	disconnect (this, SIGNAL (show_fineCorrector (int)),
 	            myRadioInterface, SLOT (set_fineCorrectorDisplay (int)));
@@ -116,7 +116,7 @@ int32_t	i;
 //	In this implementation, we implement the "states"
 //	of the state machine by using positions in the code
 //
-DSPCOMPLEX ofdm_processor::getSample (int32_t phase) {
+DSPCOMPLEX ofdmProcessor::getSample (int32_t phase) {
 DSPCOMPLEX temp;
 	if (!running)
 	   throw 21;
@@ -169,7 +169,7 @@ DSPCOMPLEX temp;
 }
 //
 
-void	ofdm_processor::getSamples (DSPCOMPLEX *v, int16_t n, int32_t phase) {
+void	ofdmProcessor::getSamples (DSPCOMPLEX *v, int16_t n, int32_t phase) {
 int32_t		i;
 
 	if (!running)
@@ -230,14 +230,14 @@ int32_t		i;
 //
 //	The main thread, reading sample and trying to identify
 //	the ofdm frames
-void	ofdm_processor::run	(void) {
+void	ofdmProcessor::run	(void) {
 int32_t		startIndex;
-int32_t		i, j;
+int32_t		i;
 DSPCOMPLEX	FreqCorr;
 int32_t		counter;
 float		currentStrength;
 int32_t		syncBufferIndex;
-int32_t		syncBufferSize;
+int32_t		syncBufferSize	= syncBufferMask + 1;
 float		envBuffer	[syncBufferMask + 1];
 float		signalLevel;
 
@@ -364,7 +364,7 @@ OFDM_PRS:
 	                     T_u - ofdmBufferIndex, coarseCorrector + fineCorrector);
 //
 //	block0 will set the phase reference for further decoding
-	   ofdmDecoder  -> processBlock_0 (ofdmBuffer);
+	   my_ofdmDecoder  -> processBlock_0 (ofdmBuffer);
 //
 //	after block 0, we will just read in the other (params -> L - 1) blocks
 //	we do it in two steps:
@@ -385,20 +385,20 @@ OFDM_SYMBOLS:
 	      for (i = (int)T_u; i < (int)T_s; i ++) 
 	         FreqCorr += ofdmBuffer [i] * conj (ofdmBuffer [i - T_u]);
 	  
-	      ofdmDecoder -> processToken (ofdmBuffer, ibits, ofdmSymbolCount);
+	      my_ofdmDecoder -> processToken (ofdmBuffer, ibits, ofdmSymbolCount);
 	      my_ficHandler -> process_ficBlock (ibits, ofdmSymbolCount);
 	   }
 
 //	and similar for the (params -> L - 4) MSC blocks
 //	   FreqCorr	= 0;
 	   for (ofdmSymbolCount = 5;
-	        ofdmSymbolCount <= (int16_t)(params -> L);
+	        ofdmSymbolCount <= params -> L;
 	        ofdmSymbolCount ++) {
 	      getSamples (ofdmBuffer, T_s, coarseCorrector + fineCorrector);
 	      for (i = (int32_t)T_u; i < (int32_t)T_s; i ++) 
 	         FreqCorr += ofdmBuffer [i] * conj (ofdmBuffer [i - T_u]);
 
-	      ofdmDecoder -> processToken (ofdmBuffer, ibits, ofdmSymbolCount);
+	      my_ofdmDecoder -> processToken (ofdmBuffer, ibits, ofdmSymbolCount);
 	      my_mscHandler -> process_mscBlock (ibits, ofdmSymbolCount);
 	   }
 //
@@ -427,9 +427,17 @@ OFDM_SYMBOLS:
 	   counter	= 0;
 
 static int waar	= 0;
-	   if ((waar++ >= 3) && f2Correction) {
-	      float correction	= ofdmDecoder -> coarseCorrector ();
-	      coarseCorrector	= correction * params -> carrierDiff;
+static	int	corrector	= 1;
+static	int	oldCorrection	= 0;
+
+	   if ((++ waar > 6) && f2Correction) {
+	      int correction	= my_ofdmDecoder -> coarseCorrector ();
+	      if (oldCorrection == correction) {
+	         correction += corrector;
+	         corrector = -corrector;
+	      }
+	      oldCorrection = correction;
+	      coarseCorrector	+= correction * params -> carrierDiff;
 	      waar = 0;
 	   }
 
@@ -450,12 +458,12 @@ static int waar	= 0;
 	}
 }
 
-void	ofdm_processor:: reset	(void) {
+void	ofdmProcessor:: reset	(void) {
 	fineCorrector = coarseCorrector = 0;
 	f2Correction	= true;
 }
 
-void	ofdm_processor::startDumping	(SNDFILE *f) {
+void	ofdmProcessor::startDumping	(SNDFILE *f) {
 	if (dumping)
 	   return;
 //	do not change the order here.
@@ -464,21 +472,21 @@ void	ofdm_processor::startDumping	(SNDFILE *f) {
 	dumpIndex	= 0;
 }
 
-void	ofdm_processor::stopDumping	(void) {
+void	ofdmProcessor::stopDumping	(void) {
 	dumping = false;
 }
 //
 
-void	ofdm_processor::coarseCorrectorOn (void) {
+void	ofdmProcessor::coarseCorrectorOn (void) {
 	f2Correction 	= true;
 	coarseCorrector	= 0;
 }
 
-void	ofdm_processor::coarseCorrectorOff (void) {
+void	ofdmProcessor::coarseCorrectorOff (void) {
 	f2Correction	= false;
 }
 
-void	ofdm_processor::stop		(void) {
+void	ofdmProcessor::stop		(void) {
 	running		= false;
 }
 

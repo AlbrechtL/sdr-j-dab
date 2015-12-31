@@ -43,10 +43,10 @@
 class	RadioInterface;
 class	common_fft;
 
-class ofdm_processor: public QThread {
+class ofdmProcessor: public QThread {
 Q_OBJECT
 public:
-		ofdm_processor	(virtualInput *,
+		ofdmProcessor	(virtualInput *,
 	                         DabParams	*,
 	                         RadioInterface *,
 	                         mscHandler *,
@@ -56,7 +56,7 @@ public:
 	                         RingBuffer<DSPCOMPLEX> *,
 #endif
 	                         RingBuffer<DSPCOMPLEX> *);	// passing
-		~ofdm_processor		(void);
+		~ofdmProcessor		(void);
 	void	reset			(void);
 	void	stop			(void);
 	void	setOffset		(int32_t);
@@ -92,7 +92,7 @@ private:
 	uint32_t	ofdmBufferIndex;
 	uint32_t	ofdmSymbolCount;
 	phaseReference	*phaseSynchronizer;
-	ofdm_decoder	*ofdmDecoder;
+	ofdmDecoder	*my_ofdmDecoder;
 	DSPFLOAT	avgCorr;
 	ficHandler	*my_ficHandler;
 	mscHandler	*my_mscHandler;

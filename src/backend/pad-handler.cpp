@@ -33,7 +33,8 @@
 	myRadioInterface	= mr;
 	connect (this, SIGNAL (showLabel (QString)),
 	         mr, SLOT (showLabel (QString)));
-	my_motHandler	= new motHandler ();
+	my_motHandler	= new motHandler (mr);
+	dynamicLabelText	= QString (" ");
 }
 
 	padHandler::~padHandler	(void) {
@@ -346,11 +347,11 @@ int16_t segmentSize		= ((segment [0] & 0x1F) << 8) | segment [1];
 	                          ( segment [6]        <<  1) |
 	                          ((segment [7] >> 7) & 0x01);
 	   my_motHandler -> processHeader (transportId,
-	                                &segment [2],
-	                                segmentSize,
-	                                headerSize,
-	                                bodySize,
-	                                lastFlag);
+	                                   &segment [2],
+	                                   segmentSize,
+	                                   headerSize,
+	                                   bodySize,
+	                                   lastFlag);
 	}
 	else
 	   my_motHandler -> processSegment (transportId,

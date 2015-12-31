@@ -39,5 +39,8 @@ void	dabProcessor::setFile		(FILE *f) {
 	(void)f;
 }
 
+void	dabProcessor::stop		(void) {
+}
+
 
 

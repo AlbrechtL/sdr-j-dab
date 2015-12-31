@@ -54,19 +54,26 @@
 	   
 	};
 	typedef	struct serviceid serviceId;
-
+//
+//	The service component describes the actual service
+//	It really should be a union
 	struct servicecomponents {
-	   bool		inUse;
-	   serviceId	*service;
-	   int16_t	subchannelId;
-	   int16_t	componentNr;
-	   int16_t	flags;
-	   int16_t	ASCTy;
-	   int16_t	PS_flag;
-	   int8_t	TMid;
+	   bool		inUse;		// just administration
+	   int8_t	TMid;		// the transport mode
+	   serviceId	*service;	// belongs to the service
+	   int16_t	componentNr;	// component
+
+	   int16_t	ASCTy;		// used for audio
+	   int16_t	PS_flag;	// use for both audio and packet
+	   int16_t	subchannelId;	// used in both audio and packet
+	   uint16_t	SCId;		// used in packet
+	   uint8_t	CAflag;		// used in packet (or not at all)
+	   int16_t	DSCTy;		// used in packet
+	   int8_t	DGflag;		// used for TDC
+	   int16_t	packetAddress;	// used in packet
 	};
 
-	typedef struct servicecomponents serviceComponents;
+	typedef struct servicecomponents serviceComponent;
 
 	struct subchannelmap {
 	   int32_t	SubChId;
@@ -76,6 +83,7 @@
 	   int32_t	protLevel;
 	   int32_t	BitRate;
 	   int16_t	language;
+	   int16_t	FEC_scheme;
 	};
 
 class	RadioInterface;
@@ -92,23 +100,27 @@ public:
 	void	printActions		(int16_t);
 	void	setCIFparameters	(int16_t);
 	void	setSelectedService	(QString &);
-	void	setunnamedService	(int);
 private:
 	RadioInterface	*myRadioInterface;
 	mscHandler	*myDecoder;
 	serviceId	*findServiceId (int32_t);
-	channelMap	*findChannelMap (int16_t, int16_t);
-	void		bindService (int8_t,
-	                             int32_t, int16_t,
-	                             int16_t, int16_t, int16_t);
+	serviceComponent *find_packetComponent (int16_t);
+	void		bind_audioService (int8_t,
+	                                   int32_t, int16_t,
+	                                   int16_t, int16_t, int16_t);
+	void		bind_packetService (int8_t,
+	                                    int32_t, int16_t,
+	                                    int16_t, int16_t, int16_t);
 	int32_t		selectedService;
 	void		process_FIG0		(uint8_t *);
 	void		process_FIG1		(uint8_t *);
+	void		process_FIG2		(uint8_t *);
 	void		FIG0Extension0		(uint8_t *);
 	void		FIG0Extension1		(uint8_t *);
 	void		FIG0Extension2		(uint8_t *);
 	void		FIG0Extension3		(uint8_t *);
 	void		FIG0Extension5		(uint8_t *);
+	void		FIG0Extension6		(uint8_t *);
 	void		FIG0Extension8		(uint8_t *);
 	void		FIG0Extension9		(uint8_t *);
 	void		FIG0Extension10		(uint8_t *);
@@ -127,6 +139,7 @@ private:
 	                                         int16_t, uint8_t, uint8_t);
 	int16_t		HandleFIG0Extension3	(uint8_t *, int16_t);
 	int16_t		HandleFIG0Extension5	(uint8_t *, int16_t);
+	int16_t		HandleFIG0Extension6	(uint8_t *, int16_t, uint8_t);
 	int16_t		HandleFIG0Extension8	(uint8_t *,
 	                                         int16_t, uint8_t);
 	int16_t		HandleFIG0Extension13	(uint8_t *,
@@ -134,7 +147,7 @@ private:
 	int16_t		HandleFIG0Extension22	(uint8_t *, int16_t);
 	int32_t		dateTime	[8];
 	channelMap	ficList [64];
-	serviceComponents	components [64];
+	serviceComponent	components [64];
 	serviceId	*listofServices;
 	bool	dateFlag;
 signals:

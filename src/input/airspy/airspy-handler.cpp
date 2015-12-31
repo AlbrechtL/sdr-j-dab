@@ -26,7 +26,7 @@
 static
 const	int	EXTIO_NS	=  8192;
 static
-const	int	EXTIO_BASE_TYPE_SIZE = sizeof (int16_t);
+const	int	EXTIO_BASE_TYPE_SIZE = sizeof (float);
 
 	airspyHandler::airspyHandler (QSettings *s, bool *success) {
 int	result, i;
@@ -39,13 +39,13 @@ int	result, i;
 	inputRate		= Khz (2500);
 	*success		= false;
 	airspySettings	-> beginGroup ("airspyHandler");
-	vgaGain			= airspySettings -> value ("vga", 5).toInt ();
-	vgaSlider		-> setValue (vgaGain);
-	mixerGain		= airspySettings -> value ("mixer", 10). toInt ();
-	mixerSlider		-> setValue (mixerGain);
+	int16_t temp 		= airspySettings -> value ("linearity", 10).
+	                                                          toInt ();
+	linearitySlider		-> setValue (temp);
+	temp			= airspySettings -> value ("sensitivity", 10).
+	                                                          toInt ();
+	sensitivitySlider	-> setValue (temp);
 	mixer_agc		= false;
-	lnaGain			= airspySettings -> value ("lna", 5). toInt ();
-	lnaSlider		-> setValue (lnaGain);
 	lna_agc			= false;
 	rf_bias			= false;
 	airspySettings	-> endGroup ();
@@ -96,7 +96,8 @@ int	result, i;
 	             my_airspy_error_name((airspy_error)result), result);
         return;
 	}
-	
+
+	fprintf (stderr, "airspy init is geslaagd\n");
 	result = my_airspy_open (&device);
 	if (result != AIRSPY_SUCCESS) {
 	   printf ("my_airpsy_open () failed: %s (%d)\n",
@@ -104,12 +105,10 @@ int	result, i;
 	   return;
 	}
 	theBuffer		= new RingBuffer<DSPCOMPLEX> (256 *1024);
-	connect (lnaSlider, SIGNAL (valueChanged (int)),
-	         this, SLOT (set_lna_gain (int)));
-	connect (vgaSlider, SIGNAL (valueChanged (int)),
-	         this, SLOT (set_vga_gain (int)));
-	connect (mixerSlider, SIGNAL (valueChanged (int)),
-	         this, SLOT (set_mixer_gain (int)));
+	connect (linearitySlider, SIGNAL (valueChanged (int)),
+	         this, SLOT (set_linearity (int)));
+	connect (sensitivitySlider, SIGNAL (valueChanged (int)),
+	         this, SLOT (set_sensitivity (int)));
 	connect (lnaButton, SIGNAL (clicked (void)),
 	         this, SLOT (set_lna_agc (void)));
 	connect (mixerButton, SIGNAL (clicked (void)),
@@ -135,9 +134,8 @@ err:
 
 	airspyHandler::~airspyHandler (void) {
 	airspySettings	-> beginGroup ("airspyHandler");
-	airspySettings -> setValue ("vga", vgaGain);
-	airspySettings -> setValue ("mixer", mixerGain);
-	airspySettings -> setValue ("lna", lnaGain);
+	airspySettings -> setValue ("linearity", linearitySlider -> value ());
+	airspySettings -> setValue ("sensitivity", sensitivitySlider -> value ());
 	airspySettings	-> endGroup ();
 	myFrame	-> hide ();
 	if (Handle == NULL)
@@ -199,6 +197,7 @@ int32_t	bufSize	= EXTIO_NS * EXTIO_BASE_TYPE_SIZE * 2;
 
 	theBuffer	-> FlushRingBuffer ();
 	result = my_airspy_set_sample_type (device, AIRSPY_SAMPLE_INT16_IQ);
+//	result = my_airspy_set_sample_type (device, AIRSPY_SAMPLE_FLOAT32_IQ);
 	if (result != AIRSPY_SUCCESS) {
 	   printf ("my_airspy_set_sample_type () failed: %s (%d)\n",
 	            my_airspy_error_name ((airspy_error)result), result);
@@ -206,9 +205,8 @@ int32_t	bufSize	= EXTIO_NS * EXTIO_BASE_TYPE_SIZE * 2;
 	}
 	
 	setExternalRate (inputRate);
-	set_vga_gain	(vgaGain);
-	set_mixer_gain	(mixerGain);
-	set_lna_gain	(lnaGain);
+	set_linearity	(linearitySlider -> value ());
+	set_sensitivity	(sensitivitySlider -> value ());
 	
 	result = my_airspy_start_rx (device,
 	            (airspy_sample_block_cb_fn)callback, this);
@@ -249,7 +247,7 @@ airspyHandler *p;
 	   return 0;		// should not happen
 	p = static_cast<airspyHandler *> (transfer -> ctx);
 
-// AIRSPY_SAMPLE_INT16_IQ:
+// AIRSPY_SAMPLE_FLOAT32_IQ:
 	uint32_t bytes_to_write = transfer -> sample_count * sizeof (int16_t) * 2; 
 	uint8_t *pt_rx_buffer   = (uint8_t *)transfer->samples;
 	
@@ -273,9 +271,10 @@ airspyHandler *p;
 //	called from AIRSPY data callback
 //	this method is declared in airspyHandler class
 //	The buffer received from hardware contains
-//	16-bit int IQ samples (4 bytes per sample)
+//	32-bit floating point IQ samples (8 bytes per sample)
 //
-//	recoded for the sdr-j dab software
+//	recoded for the sdr-j framework
+//	2*2 = 4 bytes for sample, as per AirSpy USB data stream format
 //	we do the rate conversion here, read in groups of 2 * 625 samples
 //	and transform them into groups of 2 * 512 samples
 int 	airspyHandler::data_available (void *buf, int buf_size) {	
@@ -287,7 +286,7 @@ int32_t  i, j;
 	for (i = 0; i < nSamples; i ++) {
 	   convBuffer [convIndex ++] = DSPCOMPLEX (sbuf [2 * i] / (float)2048,
 	                                           sbuf [2 * i + 1] / (float)2048);
-	   if (convIndex > 2 * 625) {
+	   if (convIndex > 1250) {
 	      for (j = 0; j < 2 * 512; j ++) {
 	         int16_t  inpBase	= mapTable_int [j];
 	         float    inpRatio	= mapTable_float [j];
@@ -370,7 +369,7 @@ void	airspyHandler::resetBuffer (void) {
 }
 
 int16_t	airspyHandler::bitDepth (void) {
-	return 12;
+	return 13;
 }
 
 int32_t	airspyHandler::getRate (void) {
@@ -396,10 +395,8 @@ uint8_t	airspyHandler::myIdentity		(void) {
 	return AIRSPY;
 }
 //
-//	Original functions from the airspy extio dll
-/* Parameter value shall be between 0 and 15 */
-void	airspyHandler::set_lna_gain (int value) {
-int result = my_airspy_set_lna_gain (device, lnaGain = value);
+void	airspyHandler::set_linearity (int value) {
+int result = my_airspy_set_linearity_gain (device, value);
 
 	if (result != AIRSPY_SUCCESS) {
 	   printf ("airspy_set_lna_gain () failed: %s (%d)\n",
@@ -409,9 +406,8 @@ int result = my_airspy_set_lna_gain (device, lnaGain = value);
 	   lnaDisplay	-> display (value);
 }
 
-/* Parameter value shall be between 0 and 15 */
-void	airspyHandler::set_mixer_gain (int value) {
-int result = my_airspy_set_mixer_gain (device, mixerGain = value);
+void	airspyHandler::set_sensitivity (int value) {
+int result = my_airspy_set_mixer_gain (device, value);
 
 	if (result != AIRSPY_SUCCESS) {
 	   printf ("airspy_set_mixer_gain() failed: %s (%d)\n",
@@ -421,17 +417,6 @@ int result = my_airspy_set_mixer_gain (device, mixerGain = value);
 	   mixerDisplay	-> display (value);
 }
 
-/* Parameter value shall be between 0 and 15 */
-void	airspyHandler::set_vga_gain (int value) {
-int result = my_airspy_set_vga_gain (device, vgaGain = value);
-
-	if (result != AIRSPY_SUCCESS) {
-	   printf ("airspy_set_vga_gain () failed: %s (%d)\n",
-	            my_airspy_error_name ((airspy_error)result), result);
-	}
-	else
-	   vgaDisplay	-> display (value);
-}
 //
 //	agc's
 /* Parameter value:
@@ -585,6 +570,22 @@ bool	airspyHandler::load_airspyFunctions (void) {
 	                       GETPROCADDRESS (Handle, "airspy_set_vga_gain");
 	if (my_airspy_set_vga_gain == NULL) {
 	   fprintf (stderr, "Could not find airspy_set_vga_gain\n");
+	   return false;
+	}
+	
+	my_airspy_set_linearity_gain = (pfn_airspy_set_linearity_gain)
+	                       GETPROCADDRESS (Handle, "airspy_set_linearity_gain");
+	if (my_airspy_set_linearity_gain == NULL) {
+	   fprintf (stderr, "Could not find airspy_set_linearity_gain\n");
+	   fprintf (stderr, "You probably did not install 1.0.7 yet\n");
+	   return false;
+	}
+
+	my_airspy_set_sensitivity_gain = (pfn_airspy_set_sensitivity_gain)
+	                       GETPROCADDRESS (Handle, "airspy_set_sensitivity_gain");
+	if (my_airspy_set_sensitivity_gain == NULL) {
+	   fprintf (stderr, "Could not find airspy_set_sensitivity_gain\n");
+	   fprintf (stderr, "You probably did not install 1.0.7 yet\n");
 	   return false;
 	}
 

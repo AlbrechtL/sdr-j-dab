@@ -120,6 +120,14 @@ int16_t	i;
 	delete [] Data;
 }
 
+//	It might take a msec for the task to stop
+void	dabConcurrent::stop	(void) {
+	running = false;
+	while (this -> isRunning ())
+	   usleep (1);
+//	myAudioSink	-> stop ();
+}
+
 int32_t	dabConcurrent::process	(int16_t *v, int16_t cnt) {
 int32_t	fr;
 	   while ((fr = Buffer -> GetRingBufferWriteAvailable ()) < cnt) {
@@ -184,13 +192,6 @@ uint8_t	shiftRegister [9];
 	}
 }
 //
-//	It might take a msec for the task to stop
-void	dabConcurrent::stopRunning (void) {
-	running = false;
-	while (this -> isRunning ())
-	   usleep (1);
-//	myAudioSink	-> stop ();
-}
 
 void	dabConcurrent::setFiles (FILE *f1, FILE *f2) {
 	mp2File		= f1;

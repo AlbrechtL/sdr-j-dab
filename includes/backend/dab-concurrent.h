@@ -51,7 +51,7 @@ public:
 	                 audioSink *as);
 	~dabConcurrent	(void);
 int32_t	process		(int16_t *, int16_t);
-void	stopRunning	(void);
+void	stop		(void);
 void	setFiles	(FILE *, FILE *);
 private:
 void	run		(void);

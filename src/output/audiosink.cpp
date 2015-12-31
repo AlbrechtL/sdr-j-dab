@@ -73,6 +73,7 @@ int32_t	i;
 	   writerRunning = false;
 	}
 
+	writerRunning	= false;
 	if (ostream != NULL)
 	   Pa_CloseStream (ostream);
 

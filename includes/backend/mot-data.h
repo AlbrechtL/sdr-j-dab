@@ -24,26 +24,60 @@
 #ifndef	__MOT_HANDLER__
 #define	__MOT_HANDLER__
 #include	"dab-constants.h"
-#include	<QPixmap>
+#include	<QObject>
 #include	<QImage>
 #include	<QLabel>
+
+class	RadioInterface;
 
 typedef struct  {
 	int32_t ordernumber;
 	uint16_t transportId;
-	uint8_t *body;
+	QByteArray body;
 	int32_t	bodySize;
 	uint16_t contentType;
 	uint16_t contentsubType;
 	int16_t  segmentSize;
 	int16_t  numofSegments;
 	bool	marked	[100];
-	QPixmap	thePixmap;
+	QString	name;
 } motElement;
 
-class	motHandler {
+class	MOT_directory {
 public:
-		motHandler	(void);
+	uint16_t	transportId;
+	uint8_t		*dir_segments;
+	int16_t		dir_segmentSize;
+	int16_t		num_dirSegments;
+	int16_t		dirSize;
+	int16_t		numObjects;
+	motElement	*dir_proper;
+	bool		marked [512];
+	MOT_directory (uint16_t transportId,
+	               int16_t	segmentSize,
+	               int32_t dirSize, int16_t objects) {
+int16_t	i;
+	   for (i = 0; i < 512; i ++)
+	      marked [i] = false;
+	   num_dirSegments	= -1;
+	   this	-> transportId	= transportId;
+	   this	-> dirSize	= dirSize;
+	   this	-> numObjects	= objects;
+	   this	-> dir_segmentSize	= segmentSize;
+	   dir_segments = new uint8_t [dirSize];
+	   dir_proper  = new motElement [objects];
+	}
+
+	~MOT_directory (void) {
+	   delete [] dir_segments;
+	   delete [] dir_proper;
+	}
+};
+
+class	motHandler: public QObject {
+Q_OBJECT
+public:
+		motHandler	(RadioInterface *);
 		~motHandler	(void);
 void		processHeader (int16_t	transportId,
 	                       uint8_t	*segment,
@@ -51,23 +85,47 @@ void		processHeader (int16_t	transportId,
 	                       int16_t	headerSize,
 	                       int32_t	bodySize,
 	                       bool	lastFlag);
+void		processDirectory (int16_t	transportId,
+	                       uint8_t	*segment,
+	                       int16_t	segmentSize,
+	                       bool	lastFlag);
+void		directorySegment (uint16_t	transportId,
+	                          uint8_t	*segment,
+	                          int16_t	segmentNumber,
+	                          int16_t	segmentSize,
+	                          bool		lastFlag);
+void		analyse_theDirectory	(void);
+int16_t		get_dirEntry	(int16_t	number,
+	                         uint8_t *data,
+	                         uint16_t currentBase);
 
 void		processSegment	(int16_t	transportId,
 	                         uint8_t	*segment,
 	                         int16_t	segmentNumber,
 	                         int16_t	segmentSize,
 	                         bool		lastFlag);
+	void	my_help		(void);
 private:
 	motElement table [16];
 	int16_t	ordernumber;
-	QLabel	theLabel;
-
-motElement	*getHandle	(uint16_t transportId);
-void		newEntry	(uint16_t	transportId,
+	MOT_directory	*theDirectory;
+	
+	motElement	*getHandle	(uint16_t transportId);
+	void	newEntry	(uint16_t	transportId,
 	                         int16_t	size,
 	                         int16_t	contentType,
-	                         int16_t	contentsubType);
-bool		isComplete	(motElement *);
-void		handleComplete	(motElement *);
+	                         int16_t	contentsubType,
+	                         char		*name);
+	void	newEntry	(int16_t	index,
+	                         uint16_t	transportId,
+	                         int16_t	size,
+	                         int16_t	contentType,
+	                         int16_t	contentsubType,
+	                         char		*name);
+	bool	isComplete	(motElement *);
+	void	handleComplete	(motElement *);
+	void	checkDir	(QString &);
+signals:
+	void	the_picture	(QByteArray, int);
 };
 #endif

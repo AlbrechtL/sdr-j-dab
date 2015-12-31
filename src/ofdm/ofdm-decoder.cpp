@@ -28,10 +28,13 @@
 #include	"gui.h"
 #include	"phasetable.h"
 
-	ofdm_decoder::ofdm_decoder	(DabParams	*p,
+#define	SYNC_LENGTH	15
+
+	ofdmDecoder::ofdmDecoder	(DabParams	*p,
 	                                 RingBuffer<DSPCOMPLEX> *iqBuffer,
 	                                 DSPCOMPLEX	*refTable,
 	                                 RadioInterface *mr) {
+
 	this	-> params		= p;
 	this	-> iqBuffer		= iqBuffer;
 	this	-> refTable		= refTable;
@@ -39,6 +42,8 @@
 	this	-> T_s			= params	-> T_s;
 	this	-> T_u			= params	-> T_u;
 	this	-> carriers		= params	-> K;
+
+	this	-> syncBuffer		= new float [T_u];
 
 	connect (this, SIGNAL (showIQ (int)),
 	         mr, SLOT (showIQ (int)));
@@ -55,57 +60,38 @@
 	         mr, SLOT (show_snr (int)));
 	snrCount		= 0;
 	snr			= 0;	
-	strength		= 0;
 }
 
-	ofdm_decoder::~ofdm_decoder	(void) {
+	ofdmDecoder::~ofdmDecoder	(void) {
 	delete	fft_handler;
 	delete	phaseReference;
 	delete	myMapper;
+	delete []	syncBuffer;
 }
 //	in practive, we use the "incoming" block
 //	and use its data to generate the prs
-void	ofdm_decoder::processBlock_0 (DSPCOMPLEX *vi) {
+void	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi) {
 DSPCOMPLEX	*v = (DSPCOMPLEX *)alloca (T_u * sizeof (DSPCOMPLEX));
+int16_t	i;
 
 	memcpy (fft_buffer, vi, T_u * sizeof (DSPCOMPLEX));
 	fft_handler	-> do_FFT ();
-//	The + and - frequencies are still to be switched, for simple
-//	strength and middle computation:
-	memcpy (v, &fft_buffer [T_u / 2], T_u / 2 * sizeof (DSPCOMPLEX));
-	memcpy (&v [T_u / 2], fft_buffer, T_u / 2 * sizeof (DSPCOMPLEX));
-	coarseOffset 	= getMiddle	(v);
-	snr		= 0.7 * snr + 0.3 * get_snr (v);
-	strength	= 0.7 * strength + 0.3 * newStrength (v);
+
+	snr		= 0.7 * snr + 0.3 * get_snr (fft_buffer);
 	if (++snrCount > 10) {
 	   show_snr (snr);
 	   snrCount = 0;
 	}
-//	we are now in the frequency domain, and we keep the carriers
-//	from -Tu / 2 .. Tu / 2 \{0} in the phaseReference 
 	memcpy (phaseReference, fft_buffer, T_u * sizeof (DSPCOMPLEX));
-//
-//	we use the "corrected" v for computing some thing
-//	memcpy (phaseReference, v, T_u * sizeof (DSPCOMPLEX));
-//	float	offsa	= 0;
-//	float	offsb	= 0;
-//
-//	for (i = - carriers / 2; i < 0; i ++) {
-//	   int16_t index = T_u / 2 + i;
-//	   offsa	+= arg (v [index] * conj (refTable [index])) * index;
-//	   offsb	+= index * index;
-//	}
-//
-//	fprintf (stderr, "estimated SCO = %f\n",
-//	                  offsa / (2 * M_PI * T_s / T_u * offsb));
-//
+	for (i = 0; i < T_u; i ++)
+	   syncBuffer [i] = abs (fft_buffer [i]);
 }
 
 //	for the other blocks of data, the first step is to go from
 //	time to frequency domain, to get the carriers.
 //	This requires an FFT and zero de-padding and rearrangement
-void	ofdm_decoder::processToken (DSPCOMPLEX *inv,
-	                            int16_t *ibits, int32_t blkno) {
+void	ofdmDecoder::processToken (DSPCOMPLEX *inv,
+	                           int16_t *ibits, int32_t blkno) {
 int16_t		i;
 static		int cnt	= 0;
 
@@ -114,6 +100,10 @@ static		int cnt	= 0;
 //
 //	Note that "mapIn" maps to -carriers / 2 .. carriers / 2
 //	we did not set the fft output to low .. high
+	if (blkno < SYNC_LENGTH)
+	   for (i = 0; i < T_u; i ++)
+	      syncBuffer [i] +=  abs (fft_buffer [i]);
+
 	for (i = 0; i < carriers; i ++) {
 	   int16_t	index	= myMapper -> mapIn (i);
 	   if (index < 0) 
@@ -144,41 +134,59 @@ static		int cnt	= 0;
 	}
 }
 
-int16_t	ofdm_decoder::coarseCorrector (void) {
+int16_t	ofdmDecoder::coarseCorrector (void) {
+	coarseOffset 	= getMiddle	(syncBuffer);
 	return coarseOffset;
 }
 
-int16_t	ofdm_decoder::getMiddle (DSPCOMPLEX *v) {
+//
+int16_t	ofdmDecoder::getMiddle (float *v) {
 int16_t		i;
 DSPFLOAT	sum = 0;
 int16_t		maxIndex = 0;
 DSPFLOAT	oldMax	= 0;
+float	s1	= 0;
+int16_t		base1	= 0;
+	for (i = (T_u - carriers) / 2;
+	     i < (T_u + carriers) / 2; i ++)
+	   s1 += v [(T_u / 2 + i) % T_u];
+	s1 /= carriers;
 //
+//	we are looking for the (i, i + carriers + 1) combination
+//	with power less than threshold
+	for (i = (T_u - carriers) / 2 - 50;
+	     i < (T_u - carriers) / 2 + 50; i ++)
+	   if (v [(T_u / 2 + i) % T_u] +
+	                  v [(T_u / 2 + carriers + i + 1) % T_u] < s1 / 2)
+	   base1 = i + 1 + (T_u - carriers) / 2;
+
 //	basic sum over K carriers that are - most likely -
 //	in the range
 //	The range in which the carrier should be is
 //	T_u / 2 - K / 2 .. T_u / 2 + K / 2
 //	We first determine an initial sum
-	for (i = 10; i < carriers + 10; i ++)
-	   sum += abs (v [i]);
-//
+	for (i = (T_u -  carriers) / 2 - 50;
+	                 i < (T_u + carriers) / 2 - 50; i ++)
+	   sum += v [(T_u / 2 + i) % T_u];
+	
 //	Now a moving sum, look for a maximum within a reasonable
 //	range (around (T_u - K) / 2, the start of the useful frequencies)
-	for (i = 10; i < T_u - carriers - 10; i ++) {
-	   sum -= abs (v [i]);
-	   sum += abs (v [i + carriers]);
+	for (i = (T_u - carriers) / 2 - 50;
+	              i < (T_u - carriers) / 2 + 50; i ++) {
+	   sum -= abs (v [(T_u / 2 + i) % T_u]);
+	   sum += abs (v [(T_u / 2 + i + carriers) % T_u]);
 	   if (sum > oldMax) {
 	      sum = oldMax;
 	      maxIndex = i;
 	   }
 	}
-	return maxIndex - (T_u - carriers) / 2;
+	return  (base1 + maxIndex - (T_u - carriers) / 2) / 2;
 }
 //
 //
 //	for the snr we have a full T_u wide vector, with in the middle
 //	K carriers
-int16_t	ofdm_decoder::get_snr (DSPCOMPLEX *v) {
+int16_t	ofdmDecoder::get_snr (DSPCOMPLEX *v) {
 int16_t	i;
 DSPFLOAT	noise 	= 0;
 DSPFLOAT	signal	= 0;
@@ -186,28 +194,15 @@ int16_t	low	= T_u / 2 -  carriers / 2;
 int16_t	high	= low + carriers;
 
 	for (i = 10; i < low - 20; i ++)
-	   noise += abs (v [i]);
+	   noise += abs (v [(T_u / 2 + i) % T_u]);
 
 	for (i = high + 20; i < T_u - 10; i ++)
-	   noise += abs (v [i]);
+	   noise += abs (v [(T_u / 2 + i) % T_u]);
 
 	noise	/= (low - 30 + T_u - high - 30);
 	for (i = T_u / 2 - carriers / 4;  i < T_u / 2 + carriers / 4; i ++)
-	   signal += abs (v [i]);
+	   signal += abs (v [(T_u / 2 + i) % T_u]);
 
 	return get_db (signal / (carriers / 2)) - get_db (noise);
-}
-
-int16_t	ofdm_decoder::newStrength (DSPCOMPLEX *v) {
-int16_t	i;
-DSPFLOAT	signal	= 0;
-
-	for (i = T_u / 2 - carriers / 4; i < T_u / 2 + carriers / 4; i ++)
-	   signal += abs (v [i]);
-	return get_db (signal / (carriers / 2));
-}
-
-int16_t	ofdm_decoder::getStrength (void) {
-	return strength;
 }
 

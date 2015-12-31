@@ -171,16 +171,16 @@ int16_t	i, k;
 	                                                 the_mscHandler);
 //
 //	the default is:
-	the_ofdmProcessor = new ofdm_processor (myRig,
-	                                        &dabModeParameters,
-	                                        this,
-	                                        the_mscHandler,
-	                                        the_ficHandler,
-	                                        threshold,
+	the_ofdmProcessor = new ofdmProcessor (myRig,
+	                                       &dabModeParameters,
+	                                       this,
+	                                       the_mscHandler,
+	                                       the_ficHandler,
+	                                       threshold,
 #ifdef	HAVE_SPECTRUM
-	                                        spectrumBuffer,
+	                                       spectrumBuffer,
 #endif
-	                                        iqBuffer);
+	                                       iqBuffer);
 //
 	ensemble.setStringList (Services);
 	ensembleDisplay	-> setModel (&ensemble);
@@ -263,9 +263,12 @@ int16_t	i, k;
 	versionName	-> setText (v);
 //	and start the timer
 	displayTimer		-> start (1000);
+//
+	pictureLabel		= NULL;
 }
 
 	RadioInterface::~RadioInterface () {
+	fprintf (stderr, "we gaan nu echt deleten\n");
 }
 //
 //	at the end, save the values used
@@ -327,22 +330,26 @@ void	RadioInterface::TerminateProcess (void) {
 	   fclose (mp4File);
 	}
 
-	while (the_ofdmProcessor -> isRunning ()) {
-	   the_ofdmProcessor -> stop ();
-	   usleep (100);
-	}
-	
+	the_mscHandler	-> stop	();		// might be concurrent
+	the_ofdmProcessor -> stop ();		// definitely concurrent
+	myRig		-> stopReader ();
+	our_audioSink	-> stop ();
 	dumpControlState (dabSettings);
 	delete		the_ofdmProcessor;
 	delete		the_ficHandler;
 	delete		the_mscHandler;
 	delete		myRig;
+	delete		our_audioSink;
 #ifdef	HAVE_SPECTRUM
 	delete spectrumHandler;
+	fprintf (stderr, "the spectrumHandler is gone\n");
 #endif
+	if (pictureLabel != NULL)
+	   delete pictureLabel;
+	pictureLabel	= NULL;
 	accept ();
-	qDebug () <<  "Termination started";
-	delete		displayTimer;
+	fprintf (stderr, "Termination started");
+//	delete		displayTimer;
 }
 
 void	RadioInterface::abortSystem (int d) {
@@ -1058,16 +1065,16 @@ QString	file;
 #ifdef	HAVE_SPECTRUM
 	spectrumHandler	-> setBitDepth (myRig -> bitDepth ());
 #endif
-	the_ofdmProcessor	= new ofdm_processor (myRig,
-	                                              &dabModeParameters,
-	                                              this,
-	                                              the_mscHandler,
-	                                              the_ficHandler,
-	                                              threshold,
+	the_ofdmProcessor	= new ofdmProcessor (myRig,
+	                                             &dabModeParameters,
+	                                             this,
+	                                             the_mscHandler,
+	                                             the_ficHandler,
+	                                             threshold,
 #ifdef	HAVE_SPECTRUM
-	                                              spectrumBuffer,
+	                                             spectrumBuffer,
 #endif
-	                                              iqBuffer);
+	                                             iqBuffer);
 }
 //
 //
@@ -1218,16 +1225,16 @@ uint8_t	Mode	= s. toInt ();
 	setModeParameters (Mode);
 	the_ficHandler		-> setBitsperBlock	(2 * dabModeParameters. K);
 	the_mscHandler		-> setMode		(&dabModeParameters);
-	the_ofdmProcessor	= new ofdm_processor (myRig,
-	                                              &dabModeParameters,
-	                                              this,
-	                                              the_mscHandler,
-	                                              the_ficHandler,
-	                                              threshold,
+	the_ofdmProcessor	= new ofdmProcessor (myRig,
+	                                             &dabModeParameters,
+	                                             this,
+	                                             the_mscHandler,
+	                                             the_ficHandler,
+	                                             threshold,
 #ifdef	HAVE_SPECTRUM
-	                                              spectrumBuffer,
+	                                             spectrumBuffer,
 #endif
-	                                              iqBuffer);
+	                                             iqBuffer);
 //	and wait for setStart
 }
 //
@@ -1298,6 +1305,19 @@ void	RadioInterface::setSynced	(char b) {
 
 void	RadioInterface::showLabel	(QString s) {
 	dynamicLabel	-> setText (s);
+}
+
+
+void	RadioInterface::showMOT		(QByteArray data, int subtype) {
+	if (pictureLabel == NULL)
+	   pictureLabel	= new QLabel (NULL);
+
+	QPixmap p;
+	p. loadFromData (data, subtype == 0 ? "GIF" :
+	                       subtype == 1 ? "JPG" :
+	                       subtype == 2 ? "BMP" : "PNG");
+	pictureLabel ->  setPixmap (p);
+	pictureLabel ->  show ();
 }
 
 #ifdef	HAVE_SPECTRUM

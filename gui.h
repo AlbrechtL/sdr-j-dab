@@ -127,7 +127,7 @@ private:
 	void		resetSelector		(void);
 	int32_t		sampleCount;
 	bool		spectrumWaterfall;
-	ofdm_processor	*the_ofdmProcessor;
+	ofdmProcessor	*the_ofdmProcessor;
 	ficHandler	*the_ficHandler;
 	mscHandler	*the_mscHandler;
 	audioSink	*our_audioSink;
@@ -137,9 +137,9 @@ private:
 	FILE		*mp2File;
 	FILE		*mp4File;
 	int16_t		scopeWidth;
-	int16_t		currentGain;
 const	char		*get_programm_type_string (uint8_t);
 const	char		*get_programm_language_string (uint8_t);
+	QLabel		*pictureLabel;
 private slots:
 	void	setStart		(void);
 	void	updateTimeDisplay	(void);
@@ -174,6 +174,7 @@ public slots:
 	void	showIQ			(int);
 	void	setSynced		(char);
 	void	showLabel		(QString);
+	void	showMOT			(QByteArray, int);
 #ifdef	HAVE_SPECTRUM
 	void	showSpectrum		(int);
 	void	set_spectrumHandler	(void);

@@ -34,21 +34,20 @@
 
 class	RadioInterface;
 
-class	ofdm_decoder: public QObject{
+class	ofdmDecoder: public QObject{
 Q_OBJECT
 public:
-		ofdm_decoder		(DabParams *,
+		ofdmDecoder		(DabParams *,
 	                                 RingBuffer<DSPCOMPLEX> *,
 	                                 DSPCOMPLEX	*,
 	                                 RadioInterface *);
-		~ofdm_decoder		(void);
-	void	initTables		(void);
+		~ofdmDecoder		(void);
 	void	processBlock_0		(DSPCOMPLEX *);
 	void	processToken		(DSPCOMPLEX *, int16_t *, int32_t n);
 	int16_t	get_snr			(DSPCOMPLEX *);
 	int16_t	coarseCorrector		(void);
 	int16_t	getStrength		(void);
-	void		set_displayToken	(int16_t);
+	void	set_displayToken	(int16_t);
 private:
 	DabParams	*params;
 	RingBuffer<DSPCOMPLEX> *iqBuffer;
@@ -57,11 +56,12 @@ private:
 	int32_t		T_s;
 	int32_t		T_u;
 	int32_t		carriers;
-	int16_t		getMiddle	(DSPCOMPLEX *);
+	int16_t		getMiddle	(float *);
 	int32_t	delta;
 	DSPCOMPLEX	*phaseReference;
 	common_fft	*fft_handler;
 	DSPCOMPLEX	*fft_buffer;
+	float		*syncBuffer;
 	permVector	*myMapper;
 	phaseTable	*phasetable;
 	int32_t		blockIndex;
