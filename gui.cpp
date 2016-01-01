@@ -1225,6 +1225,7 @@ uint8_t	Mode	= s. toInt ();
 	setModeParameters (Mode);
 	the_ficHandler		-> setBitsperBlock	(2 * dabModeParameters. K);
 	the_mscHandler		-> setMode		(&dabModeParameters);
+	delete the_ofdmProcessor;
 	the_ofdmProcessor	= new ofdmProcessor (myRig,
 	                                             &dabModeParameters,
 	                                             this,
@@ -1304,6 +1305,7 @@ void	RadioInterface::setSynced	(char b) {
 }
 
 void	RadioInterface::showLabel	(QString s) {
+	fprintf (stderr, "calling showLable\n");
 	dynamicLabel	-> setText (s);
 }
 

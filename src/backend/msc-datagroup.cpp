@@ -24,7 +24,6 @@
 #include	"deconvolve.h"
 #include	"mot-data.h"
 #include	"gui.h"
-#include	<QUdpSocket>
 
 #define	SERVER	"127.0.0.1"
 #define	PORT	8888
@@ -43,13 +42,13 @@ int8_t	interleaveDelays [] = {
 	     15, 7, 11, 3, 13, 5, 9, 1, 14, 6, 10, 2, 12, 4, 8, 0};
 
 
-#ifdef	__MINGW32__
+//#ifdef	__MINGW32__
 //
-//      It sems that the function inet_aton is not
+//      It seems that the function inet_aton is not
 //      available under Windows.
 //      Author: Paul Vixie, 1996.
 #define NS_INADDRSZ  4
-bool inet_aton (const char *src, struct in_addr *x) {
+bool inet_aton4 (const char *src, struct in_addr *x) {
 char	*dst	= (char *)x;
 uint8_t tmp[NS_INADDRSZ], *tp;
 int saw_digit = 0;
@@ -88,7 +87,7 @@ int octets = 0;
 	memcpy(dst, tmp, NS_INADDRSZ);
 	return true;
 }
-#endif
+//#endif
 //
 //	fragmentsize == Length * CUSize
 	mscDatagroup::mscDatagroup	(RadioInterface *mr,
@@ -111,7 +110,7 @@ int32_t i, j;
 	this	-> DGflag	= DGflag;
 	this	-> FEC_scheme	= FEC_scheme;
 
-	outV			= new uint8_t [2 * bitRate * 24];
+	outV			= new uint8_t [bitRate * 24];
 	interleaveData		= new int16_t *[fragmentSize]; // the size
 	for (i = 0; i < fragmentSize; i ++) {
 	   interleaveData [i] = new int16_t [16];
@@ -136,18 +135,6 @@ int32_t i, j;
 	connect (this, SIGNAL (showLabel (const QString &)),
 	         mr, SLOT (showLabel (const QString &)));
 
-	switch (DSCTy) {
-	   default:
-	   case 5:
-	      showLabel (QString ("Transparent Channel not implemented"));
-	      break;
-	   case 60:
-	      showLabel (QString ("MOT partially implemented"));
-	      break;
-	   case 59:
-	      showLabel (QString ("Embedded IP: UDP data sent to 8888"));
-	      break;
-	}
 	opt_motHandler	= NULL;
 
 //	todo: we should make a class for each of the
@@ -157,10 +144,16 @@ int32_t i, j;
 	   si_other. sin_family	= AF_INET;
 	   si_other. sin_port	= htons (PORT);
 	   socketAddr		= socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	   if (socketAddr != -1)
-	      if (inet_aton (SERVER, &si_other. sin_addr) == 0) {
+	   if (socketAddr != -1) {
+	      if (inet_aton4 (SERVER, &si_other. sin_addr) == 0) {
 	         fprintf (stderr, "inet_aton () failed\n");
+	      }
+	      else
+	         fprintf (stderr, "establishing server succeeded\n");
 	   }
+	   else
+	      fprintf (stderr, "could not get socketAddress\n");
+	
 	}
 	else
 	if (DSCTy == 60) 	// MOT
@@ -205,6 +198,18 @@ uint8_t	shiftRegister [9];
 int16_t	Data [fragmentSize];
 int16_t	i, j;
 
+	switch (DSCTy) {
+	   default:
+	   case 5:
+	      showLabel (QString ("Transparent Channel not implemented"));
+	      break;
+	   case 60:
+	      showLabel (QString ("MOT partially implemented"));
+	      break;
+	   case 59:
+	      showLabel (QString ("Embedded IP: UDP data sent to 8888"));
+	      break;
+	}
 	running	= true;
 	while (running) {
 	   while (Buffer -> GetRingBufferReadAvailable () < fragmentSize) {
@@ -273,11 +278,14 @@ void	mscDatagroup::stopRunning (void) {
 //	data compartment, for an empty mix, there may be many more
 void	mscDatagroup::handlePackets (uint8_t *data, int16_t length) {
 	while (true) {
-	   if (length < (getBits_2 (data, 0) + 1) * 24 * 8)
+	   int16_t pLength = (getBits_2 (data, 0) + 1) * 24 * 8;
+	   if (length < pLength)
 	      return;
 	   handlePacket (data);
-	   length -= (getBits_2 (data, 0) + 1) * 24 * 8;
-	   data	= &(data [(getBits_2 (data, 0) + 1) * 24 * 8]);
+	   length -= pLength;
+	   if (length < 2)
+	      return;
+	   data	= &(data [pLength]);
 	}
 }
 //
@@ -474,7 +482,7 @@ char *message = (char *)(&(data [8]));
 	               0,
 	               (struct sockaddr *)&si_other,
 	               sizeof (si_other)) == -1)
-	   fprintf (stderr, "sorry, send did not work\n");
+	      fprintf (stderr, "sorry, send did not work\n");
 }
 //
 //	MOT should be handled in a separate object (todo)

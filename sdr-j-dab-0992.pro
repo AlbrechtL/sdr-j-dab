@@ -156,6 +156,7 @@ LIBS		+= -lqwt-qt5
 LIBS		+= -lsndfile
 LIBS		+= -lole32
 LIBS		+= -lwinpthread
+LIBS		+= -lws2_32
 LIBS		+= -lwinmm
 LIBS 		+= -lstdc++
 LIBS		+= -lfaad
@@ -167,7 +168,8 @@ CONFIG		+= dabstick
 CONFIG		+= sdrplay
 CONFIG		+= airspy
 CONFIG		+= spectrum
-CONFIG		+= MOT_BASICS__
+DEFINES		+= MOT_BASICS__
+DEFINES		+= MSC_DATA__		# use at your own risk
 }
 
 #	Unfortunately, under Windows Mingw does not provide SSE support

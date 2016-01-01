@@ -454,7 +454,7 @@ static	int	oldCorrection	= 0;
 	   goto SyncOnPhase;
 	}
 	catch (int e) {
-	   fprintf (stderr, "ofdmProcessor will halt\n");
+	   fprintf (stderr, "ofdmProcessor is terminating\n");
 	}
 }
 
