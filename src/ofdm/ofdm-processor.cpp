@@ -23,6 +23,7 @@
 #include	"gui.h"
 //
 #define syncBufferMask	(2 * 32768 - 1)
+#define MAXPRESENTCOUNTER 80
 
 	ofdmProcessor::ofdmProcessor	(virtualInput *theRig,
 	                                 DabParams	*p,
@@ -78,6 +79,8 @@ int32_t	i;
 	         myRadioInterface, SLOT (set_avgTokenLengthDisplay (int)));
 	connect (this, SIGNAL (setSynced (char)),
 	         myRadioInterface, SLOT (setSynced (char)));
+    connect (this, SIGNAL (setPresent (char)),
+             myRadioInterface, SLOT (setSignalPresent (char)));
 
 	bufferContent	= 0;
 #ifdef	HAVE_SPECTRUM
@@ -235,6 +238,7 @@ int32_t		startIndex;
 int32_t		i;
 DSPCOMPLEX	FreqCorr;
 int32_t		counter;
+int32_t		presentCounter;
 float		currentStrength;
 int32_t		syncBufferIndex;
 int32_t		syncBufferSize	= syncBufferMask + 1;
@@ -260,6 +264,177 @@ initing:
 //
 //	overrule the current sLevel value
 	   sLevel	= signalLevel / (10 * T_s);
+
+       DSPCOMPLEX signal_buffer[T_u];
+       DSPCOMPLEX idealspectrum_buffer[T_u*2-1];
+       DSPCOMPLEX correlation_buffer[T_u*2-1];
+       float correlation_buffer_abs[T_u * 2 -1];
+       float max_value = 0;
+       //FILE * pFile;
+       float sprectrum_eff = 0;
+       float idealspectrum_eff = 0;
+       int carriers = 1536;
+       DSPCOMPLEX cmplx_zero(0,0);
+
+       fftwf_plan SpectrumPlan	= fftwf_plan_dft_1d (T_u,
+                                   reinterpret_cast <fftwf_complex *>(&signal_buffer),
+                                   reinterpret_cast <fftwf_complex *>(&signal_buffer),
+                                   FFTW_FORWARD, FFTW_ESTIMATE);
+
+       fftwf_plan Spectrum2nPlan = fftwf_plan_dft_1d(T_u*2-1,
+                                   reinterpret_cast <fftwf_complex *>(&correlation_buffer),
+                                   reinterpret_cast <fftwf_complex *>(&correlation_buffer),
+                                   FFTW_FORWARD, FFTW_ESTIMATE);
+
+       fftwf_plan IdealSpectrum2nPlan = fftwf_plan_dft_1d(T_u*2-1,
+                                  reinterpret_cast <fftwf_complex *>(&idealspectrum_buffer),
+                                  reinterpret_cast <fftwf_complex *>(&idealspectrum_buffer),
+                                  FFTW_FORWARD, FFTW_ESTIMATE);
+
+       fftwf_plan CorrelationPlan = fftwf_plan_dft_1d(T_u*2-1,
+                                  reinterpret_cast <fftwf_complex *>(&correlation_buffer),
+                                  reinterpret_cast <fftwf_complex *>(&correlation_buffer),
+                                  FFTW_BACKWARD, FFTW_ESTIMATE);
+
+checkSignal:
+       if(presentCounter!=0)
+           fprintf(stderr,"checkSignal\n");
+
+       setSynced (false);
+       setPresent(false);
+
+       presentCounter = 0;
+
+       /*setlocale(LC_NUMERIC, "en_US.UTF-8");
+       pFile = fopen ("data_singal.m","w");*/
+
+       // Clear buffers
+       memset(signal_buffer,0,sizeof(signal_buffer));
+       memset(idealspectrum_buffer,0,sizeof(idealspectrum_buffer));
+       memset(correlation_buffer,0,sizeof(correlation_buffer));
+
+       //fprintf(pFile,"present=[");
+
+       // Copy samples into fft buffer
+       for (i = 0; i < T_u; i ++)
+       {
+          DSPCOMPLEX sample	= getSample (0);
+          signal_buffer[i] = sample;
+          //fprintf(pFile, "%f+%fi ...\n", real(sample), imag(sample));
+       }
+       //fprintf(pFile,"];");
+
+       fftwf_execute(SpectrumPlan);
+
+       // Filter the DC 0 Hz
+       for(int i=0;i<10;i++) signal_buffer[i] = cmplx_zero;
+       for(int i=T_u-10;i<T_u;i++) signal_buffer[i] = cmplx_zero;
+
+       // Zero padding and reorder if first FFT
+       for(int i=0;i<T_u;i++)
+       {
+          DSPCOMPLEX number(jan_abs(signal_buffer[(i + T_u/2) % (T_u)]),0);
+          correlation_buffer[i] = number;
+       }
+
+       // Calculate the effective value of the zero padded correlation_buffer
+       sprectrum_eff = 0;
+       for(int i=0;i<T_u*2-1;i++)
+           sprectrum_eff += jan_abs(correlation_buffer[i]) * jan_abs(correlation_buffer[i]);
+
+       // Add an ideal spectrum into the idealspectrum_buffer
+       for(int i=0;i<carriers;i++)
+       {
+          DSPCOMPLEX number(1,0);
+          idealspectrum_buffer[(T_u - carriers)/2 + i] = number;
+       }
+
+       // Calculate the effective value of the zero padded idealspectrum_eff
+       idealspectrum_eff = 0;
+       for(int i=0;i<T_u*2-1;i++)
+           idealspectrum_eff += jan_abs(idealspectrum_buffer[i]) * jan_abs(idealspectrum_buffer[i]);
+
+     /*  fprintf(pFile,"signal_buffer=[");
+       for(int i=0;i<T_u;i++)
+       {
+           fprintf(pFile, "%f+%fi ...\n", signal_buffer[i].real(), signal_buffer[i].imag());
+       }
+       fprintf(pFile,"];");
+
+       fprintf(pFile,"idealspectrum_buffer=[");
+       for(int i=0;i<T_u*2-1;i++)
+       {
+           fprintf(pFile, "%f+%fi ...\n", idealspectrum_buffer[i].real(), idealspectrum_buffer[i].imag());
+       }
+       fprintf(pFile,"];");
+       fprintf(pFile,"correlation_buffer=[");
+       for(int i=0;i<T_u*2-1;i++)
+       {
+           fprintf(pFile, "%f+%fi ...\n", correlation_buffer[i].real(), correlation_buffer[i].imag());
+       }
+       fprintf(pFile,"];");*/
+
+       fftwf_execute(Spectrum2nPlan);
+       fftwf_execute(IdealSpectrum2nPlan);
+
+       // Do the cross correlation
+       for (int i = 0; i < 2 * T_u - 1; i++)
+       {
+           correlation_buffer[i] = correlation_buffer[i] * conj(idealspectrum_buffer[i]);
+       }
+
+       fftwf_execute(CorrelationPlan);
+
+
+      /* fprintf(pFile,"correlation_buffer2=[");
+       for(int i=0;i<T_u*2-1;i++)
+       {
+           fprintf(pFile, "%f+%fi ...\n", correlation_buffer[i].real(), correlation_buffer[i].imag());
+       }
+       fprintf(pFile,"];");*/
+
+
+       // Reorder data because the 0-frequency is middle after the FFT
+       memset(correlation_buffer_abs,0,sizeof(correlation_buffer_abs));
+       for (int i = 0; i < 2 * T_u - 1; i++)
+       {
+            // Make value absolute and reorder it
+           correlation_buffer_abs[i] = jan_abs(correlation_buffer[(i + T_u) % (2 * T_u - 1)]);
+
+           // Scale to the power
+           correlation_buffer_abs[i]  /= sqrt(sprectrum_eff*idealspectrum_eff) * (T_u*2-1);
+       }
+
+      /* fprintf(pFile,"correlation_buffer_abs=[");
+       for(int i=0;i<T_u*2-1;i++)
+       {
+           fprintf(pFile, "%f ...\n", correlation_buffer_abs[i]);
+       }
+       fprintf(pFile,"];");*/
+
+       // Looking for maximum
+       max_value = 0;
+       for(int i=0;i<T_u * 2-1;i++)
+       {
+           if(correlation_buffer_abs[i] >= max_value)
+               max_value = correlation_buffer_abs[i];
+       }
+
+       //fclose(pFile);
+
+       // Check it peak of the cross corelation. 1 is maximum similarity, 0 is no similarity.
+       // Experiments showed that 0.82 simiarity detects a real OFDM spectrum
+       if(max_value < 0.82)
+       {
+           //msleep(250);
+           goto checkSignal;
+       }
+       else
+       {
+           setPresent(true);
+           fprintf(stderr,"max = %f\n",max_value);
+       }
+
 notSynced:
 //	read in T_s samples for a next attempt;
 	   for (i = 0; i < T_s; i ++) {
@@ -268,9 +443,9 @@ notSynced:
 	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
 	   }
 
-	   currentStrength	= 0;
-	   for (i = syncBufferIndex - 50; i < syncBufferIndex; i ++)
-	      currentStrength += envBuffer [i];
+       currentStrength	= 0;
+       for (i = syncBufferIndex - 50; i < syncBufferIndex; i ++)
+          currentStrength += envBuffer [i];
 
 
 //	we now have initial values for currentStrength and signalLevel
@@ -290,7 +465,13 @@ static	DSPFLOAT	lowest	= 0;
 	                      (syncBufferIndex + 1) & syncBufferMask;
 	      counter ++;
 	      if (counter > 2 * T_s)	// hopeless
-	         goto notSynced;
+          {
+              presentCounter ++;
+              if(presentCounter >  MAXPRESENTCOUNTER / 2)
+                  goto checkSignal;
+              else
+                  goto notSynced;
+          }
 	   }
 	   lowest	= currentStrength;
 
@@ -307,7 +488,13 @@ SyncOnEndNull:
 	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
 	      counter	++;
 	      if (counter > 3 * T_s)	// hopeless
-	         goto notSynced;
+          {
+              presentCounter ++;
+              if(presentCounter >  MAXPRESENTCOUNTER / 3)
+                  goto checkSignal;
+              else
+                  goto notSynced;
+          }
 	   }
 
 SyncOnPhase:
@@ -461,6 +648,8 @@ static	int	oldCorrection	= 0;
 void	ofdmProcessor:: reset	(void) {
 	fineCorrector = coarseCorrector = 0;
 	f2Correction	= true;
+    setSynced (false);
+    setPresent(false);
 }
 
 void	ofdmProcessor::startDumping	(SNDFILE *f) {

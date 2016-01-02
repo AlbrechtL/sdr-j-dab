@@ -99,6 +99,10 @@ int16_t	i, k;
 	syncedLabel		->
 	               setStyleSheet ("QLabel {background-color : red}");
 
+    isSignalPresent = 0;
+    presentLabel->
+                   setStyleSheet ("QLabel {background-color : red}");
+
 	iqBuffer		= new RingBuffer<DSPCOMPLEX> (2 * 1536);
 	iqDisplaysize	=
 	               dabSettings -> value ("iqDisplaysize", 256). toInt ();
@@ -1286,6 +1290,24 @@ void	RadioInterface::setModeParameters (int16_t Mode) {
 	}
 }
 
+void	RadioInterface::setSignalPresent    (char b) {
+    if (isSignalPresent == b)
+       return;
+
+    isSignalPresent = b;
+    switch (isSignalPresent) {
+       case 1:
+          presentLabel ->
+                   setStyleSheet ("QLabel {background-color : green}");
+          break;
+
+       default:
+          presentLabel ->
+                   setStyleSheet ("QLabel {background-color : red}");
+          break;
+    }
+}
+
 void	RadioInterface::setSynced	(char b) {
 	if (isSynced == b)
 	   return;
@@ -1302,6 +1324,24 @@ void	RadioInterface::setSynced	(char b) {
 	               setStyleSheet ("QLabel {background-color : red}");
 	      break;
 	}
+}
+
+void	RadioInterface::setFICCRC	(char b) {
+    if (isFICCRC == b)
+       return;
+
+    isFICCRC = b;
+    switch (isFICCRC) {
+       case 1:
+          FICCRCLabel ->
+                   setStyleSheet ("QLabel {background-color : green}");
+          break;
+
+       default:
+          FICCRCLabel ->
+                   setStyleSheet ("QLabel {background-color : red}");
+          break;
+    }
 }
 
 void	RadioInterface::showLabel	(QString s) {

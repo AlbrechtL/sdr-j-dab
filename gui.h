@@ -96,6 +96,8 @@ private:
 	spectrumhandler		*spectrumHandler;
 #endif
 	char		isSynced;
+    char        isSignalPresent;
+    char        isFICCRC;
 	int32_t		outRate;
 	int32_t		outBuffer;
 	int32_t		iqDisplaysize;
@@ -173,6 +175,8 @@ public slots:
 	void	show_snr		(int);
 	void	showIQ			(int);
 	void	setSynced		(char);
+    void	setSignalPresent(char);
+    void	setFICCRC      (char);
 	void	showLabel		(QString);
 	void	showMOT			(QByteArray, int);
 #ifdef	HAVE_SPECTRUM

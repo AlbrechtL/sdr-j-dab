@@ -70,6 +70,7 @@ private:
 	uint8_t		shiftRegister [9];
 signals:
 	void		show_ficRatio	(int);
+    void        setFICCRC(char);
 };
 
 #endif

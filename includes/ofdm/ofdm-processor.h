@@ -117,6 +117,7 @@ signals:
 	void		show_coarseCorrector	(int);
 	void		show_avgTokenLength	(int);
 	void		setSynced		(char);
+    void		setPresent		(char);
 };
 #endif
 

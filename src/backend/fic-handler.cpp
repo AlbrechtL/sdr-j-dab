@@ -74,6 +74,8 @@ int16_t	i, j;
 
 	connect (this, SIGNAL (show_ficRatio (int)),
 	         mr, SLOT (show_ficRatio (int)));
+    connect (this, SIGNAL (setFICCRC (char)),
+             mr, SLOT (setFICCRC (char)));
 }
 
 		ficHandler::~ficHandler (void) {
@@ -199,8 +201,10 @@ int16_t	viterbiBlock [3072 + 24];
 	   uint8_t *p = &bitBuffer_out [(i % 3) * 256];
 	   if (!check_CRC_bits (p, 256)) {
 	      ficMissed ++;
+          setFICCRC(false);
 	      continue;
 	   }
+       setFICCRC(true);
 	   fibProcessor	-> process_FIB (p, ficno);
 	}
 //	fibProcessor	-> printActions (ficno);
