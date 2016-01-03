@@ -168,9 +168,9 @@ int16_t	i;
 	gains		= new int [gainsCount];
 	gainsCount = rtlsdr_get_tuner_gains (device, gains);
 	for (i = gainsCount; i > 0; i--)
-		fprintf(stderr, "%.1f ", gains [i - 1] / 10.0);
-	rtlsdr_set_tuner_gain_mode (device, 1);
-	rtlsdr_set_tuner_gain (device, gains [gainsCount / 2]);
+        fprintf(stderr, "%.1f ", gains [i - 1] / 10.0);
+    //rtlsdr_set_tuner_gain_mode (device, 1);
+    //rtlsdr_set_tuner_gain (device, gains [gainsCount / 2]);
 
 	_I_Buffer		= new RingBuffer<uint8_t>(1024 * 1024);
 	dabstickSettings	-> beginGroup ("dabstickSettings");
@@ -184,6 +184,7 @@ int16_t	i;
 	setExternalGain (gainSlider	-> value ());
 	set_KhzOffset	(KhzOffset	-> value ());
 	adjustRate	(rateAdjustment -> value ());
+
 	connect (gainSlider, SIGNAL (valueChanged (int)),
 	         this, SLOT (setExternalGain (int)));
 	connect (f_correction, SIGNAL (valueChanged (int)),
@@ -194,6 +195,10 @@ int16_t	i;
 	         this, SLOT (adjustRate (int)));
 	connect (checkAgc, SIGNAL (stateChanged (int)),
 	         this, SLOT (setAgc (int)));
+
+    // Switch on AGC by default
+    checkAgc->setChecked(true);
+
 	*success 		= true;
 	return;
 
@@ -297,6 +302,7 @@ static int	oldGain	= 0;
 
 	oldGain	= gain;
 	rtlsdr_set_tuner_gain (device, gains [gainsCount - gain]);
+    checkAgc->setChecked(false);
 	showGain	-> display (gainsCount - gain);
 }
 //
@@ -506,8 +512,14 @@ void	dabStick::adjustRate	(int ad) {
 
 void	dabStick::setAgc	(int state) {
 	if (checkAgc -> isChecked ())
-	   (void)rtlsdr_set_agc_mode (device, 1);
+    {
+       //(void)rtlsdr_set_agc_mode (device, 1);
+        rtlsdr_set_tuner_gain_mode (device, 0);
+    }
 	else
-	   (void)rtlsdr_set_agc_mode (device, 0);
+    {
+       //(void)rtlsdr_set_agc_mode (device, 0);
+        rtlsdr_set_tuner_gain_mode (device, 1);
+    }
 }
 
