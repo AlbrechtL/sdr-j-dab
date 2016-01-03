@@ -51,6 +51,8 @@
 #ifdef	HAVE_SPECTRUM
 #include	"spectrum-handler.h"
 #endif
+#include "DABMainWindow.h"
+
 class	QSettings;
 class	Scope;
 class	virtualInput;
@@ -142,6 +144,8 @@ private:
 const	char		*get_programm_type_string (uint8_t);
 const	char		*get_programm_language_string (uint8_t);
 	QLabel		*pictureLabel;
+
+    DABMainWindow *dabMainWindow;
 private slots:
 	void	setStart		(void);
 	void	updateTimeDisplay	(void);
@@ -179,11 +183,13 @@ public slots:
     void	setFICCRC      (char);
 	void	showLabel		(QString);
 	void	showMOT			(QByteArray, int);
+    void	TestUIButtonClicked	(void);
 #ifdef	HAVE_SPECTRUM
 	void	showSpectrum		(int);
 	void	set_spectrumHandler	(void);
 private:
 	bool	spectrumisShown;
+    bool	NewGUIisShown;
 #endif
 };
 

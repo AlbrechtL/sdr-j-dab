@@ -43,7 +43,8 @@ INCLUDEPATH += . \
 	      ./includes/various \
 	      ./src/input \
 	      ./src/input/rawfiles \
-	      ./src/input/wavfiles 
+              ./src/input/wavfiles \
+              ./NewGUI
 
 # Input
 HEADERS += ./gui.h \
@@ -82,10 +83,19 @@ HEADERS += ./gui.h \
 	   ./includes/various/Xtan2.h \
 	   ./src/input/virtual-input.h \
 	   ./src/input/rawfiles/rawfiles.h \
-	   ./src/input/wavfiles/wavfiles.h 
+           ./src/input/wavfiles/wavfiles.h \
+    NewGUI/DABMainWindow.h \
+    NewGUI/MultColorLED.h \
+    NewGUI/DialogUtil.h \
+    NewGUI/Util.h \
+    NewGUI/qwtlevelmeter.h \
+    NewGUI/qwtsmeter.h \
+    NewGUI/serviceselector.h
 
 FORMS +=   ./sdrgui.ui \
-	   ./src/input/filereader-widget.ui 
+	   ./src/input/filereader-widget.ui \  
+    NewGUI/serviceselector.ui \
+    NewGUI/DABMainWindow.ui
 
 SOURCES += ./main.cpp \
            ./gui.cpp \
@@ -121,23 +131,30 @@ SOURCES += ./main.cpp \
 	   ./src/various/Xtan2.cpp \
 	   ./src/input/virtual-input.cpp \
 	   ./src/input/rawfiles/rawfiles.cpp \
-	   ./src/input/wavfiles/wavfiles.cpp 
+	   ./src/input/wavfiles/wavfiles.cpp \ 
+    NewGUI/DABMainWindow.cpp \
+    NewGUI/MultColorLED.cpp \
+    NewGUI/DialogUtil.cpp \
+    NewGUI/Util.cpp \
+    NewGUI/qwtlevelmeter.cpp \
+    NewGUI/qwtsmeter.cpp \
+    NewGUI/serviceselector.cpp
 #
 #	for unix systems this is about it. Adapt when needed for naming
 #	and locating libraries. If you do not need a device as
 #	listed, just comment the line out.
 unix {
 CONFIG		+= dabstick
-CONFIG		+= sdrplay
+#CONFIG		+= sdrplay
 CONFIG		+= rtl_tcp
-CONFIG		+= airspy
+#CONFIG		+= airspy
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__ 	# use at your own risk
 DEFINES		+= MSC_DATA__		# use at your own risk
 DESTDIR		= ./linux-bin
 INCLUDEPATH	+= /usr/include/qwt /usr/local/include
-#LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu
-LIBS		+= -lqwt-qt5 -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl  # fedora
+LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu
+#LIBS		+= -lqwt-qt5 -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl  # fedora
 LIBS		+= -lportaudio
 LIBS		+= -lsndfile
 LIBS		+= -lfaad

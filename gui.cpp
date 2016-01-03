@@ -138,6 +138,9 @@ int16_t	i, k;
 	spectrumButton	-> hide ();
 #endif
 
+    NewGUIisShown = false;
+    dabMainWindow = new DABMainWindow(this);
+    dabMainWindow->show();
 //	We will not bore our users with entries for which there is
 //	no device
 #ifdef	HAVE_SDRPLAY
@@ -228,6 +231,9 @@ int16_t	i, k;
 	connect (spectrumButton, SIGNAL (clicked (void)),
 	              this, SLOT (set_spectrumHandler (void)));
 #endif
+    connect (TestUIButton, SIGNAL (clicked (void)),
+                  this, SLOT (TestUIButtonClicked (void)));
+
 //
 //	Timers
 	displayTimer		= new QTimer ();
@@ -580,11 +586,15 @@ void	RadioInterface::clearEnsemble	(void) {
 }
 
 void	RadioInterface::addtoEnsemble (const QString &s) {
+    static int counter = 0;
 	Services << s;
 	Services. removeDuplicates ();
 	ensemble. setStringList (Services);
 	ensembleDisplay	-> setModel (&ensemble);
 	the_ofdmProcessor	-> coarseCorrectorOff ();
+    dabMainWindow->onServiceChanged(counter,s);
+    counter++;
+    counter %=4;
 }
 //
 //	a slot, called by the fib processor
@@ -712,6 +722,7 @@ QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 	language	= the_mscHandler	-> getLanguage ();
 	type		= the_mscHandler	-> getType ();
 	programName	-> setText (a);
+    dabMainWindow->SetStationName(a);
 	dynamicLabel	-> setText ("");
 	switch (dabModus) {
 	   case DAB:	dabMode -> setText ("DAB");
@@ -727,7 +738,9 @@ QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 	}
 
 	nameofLanguage	-> setText (get_programm_language_string (language));
+    dabMainWindow->SetLanguage(get_programm_language_string (language));
 	programType	-> setText (get_programm_type_string (type));
+    dabMainWindow->SetProgrType(get_programm_type_string (type));
 }
 
 void	RadioInterface::set_dumping (void) {
@@ -880,6 +893,7 @@ void	RadioInterface::channelData (int subchId,
 	LengthDisplay		-> display (Length);
 	protLevelDisplay	-> display (protLevel);
 	bitRateDisplay		-> display (bitRate);
+    dabMainWindow->SetBitrate(QString::number(bitRate) + " kbps");
 	ASCTyDisplay		-> display (ASCTy);
 }
 
@@ -893,6 +907,7 @@ void	RadioInterface::show_ficRatio (int s) {
 
 void	RadioInterface::show_snr (int s) {
 	snrDisplay	-> display (s);
+    dabMainWindow->OnInputSignalLevelChanged(s);
 }
 //
 //	setDevice is called trough a signal from the gui
@@ -1347,6 +1362,7 @@ void	RadioInterface::setFICCRC	(char b) {
 void	RadioInterface::showLabel	(QString s) {
 	fprintf (stderr, "calling showLable\n");
 	dynamicLabel	-> setText (s);
+    dabMainWindow->SetTextMessage(s);
 }
 
 
@@ -1372,3 +1388,12 @@ void	RadioInterface::set_spectrumHandler (void) {
 }
 #endif
 
+void	RadioInterface::TestUIButtonClicked (void) {
+    NewGUIisShown = !NewGUIisShown;
+
+    if(NewGUIisShown)
+        dabMainWindow->show();
+    else
+        dabMainWindow->hide();
+
+}
