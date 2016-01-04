@@ -103,7 +103,8 @@ private:
 	int32_t		lastFrequency;
 	bool		libraryLoaded;
 	bool		open;
-	int		*gains;
+    int		*gains;
+    int     CurrentManualGain;
 	int16_t		gainsCount;
 //	here we need to load functions from the dll
 	bool		load_rtlFunctions	(void);

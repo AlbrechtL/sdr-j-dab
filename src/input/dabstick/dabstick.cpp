@@ -107,7 +107,8 @@ int16_t	i;
 	lastFrequency		= KHz (94700);	// just a dummy
 	this	-> sampleCounter= 0;
 	this	-> vfoOffset	= 0;
-	gains			= NULL;
+    gains			= NULL;
+    CurrentManualGain	= 0;
 
 #ifdef	__MINGW32__
 	const char *libraryString = "rtlsdr.dll";
@@ -294,13 +295,12 @@ void	dabStick::stopReader		(void) {
 }
 //
 void	dabStick::setExternalGain	(int gain) {
-static int	oldGain	= 0;
-	if (gain == oldGain)
+    if (gain == CurrentManualGain)
 	   return;
 	if ((gain < 0) || (gain >= gainsCount))
 	   return;
 
-	oldGain	= gain;
+    CurrentManualGain	= gain;
 	rtlsdr_set_tuner_gain (device, gains [gainsCount - gain]);
     checkAgc->setChecked(false);
 	showGain	-> display (gainsCount - gain);
@@ -520,6 +520,7 @@ void	dabStick::setAgc	(int state) {
     {
        //(void)rtlsdr_set_agc_mode (device, 0);
         rtlsdr_set_tuner_gain_mode (device, 1);
+        rtlsdr_set_tuner_gain (device, gains [gainsCount - CurrentManualGain]);
     }
 }
 
