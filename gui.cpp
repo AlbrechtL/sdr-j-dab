@@ -699,31 +699,45 @@ const char *RadioInterface::get_programm_language_string (uint8_t language) {
 }
 
 void	RadioInterface::selectService (QModelIndex s) {
-int8_t	dabModus;
+uint8_t	coding;
 int16_t	type, language;
+bool	is_audio;
 
 QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 	the_ficHandler -> setSelectedService (a);
-	dabModus	= the_mscHandler	-> getMode ();
-	language	= the_mscHandler	-> getLanguage ();
-	type		= the_mscHandler	-> getType ();
-	programName	-> setText (a);
-	dynamicLabel	-> setText ("");
-	switch (dabModus) {
-	   case DAB:	dabMode -> setText ("DAB");
-	                break;
 
-	   case DAB_PLUS:
-	                dabMode -> setText ("DAB +");
-	                break;
-
-	   default:
-	                dabMode -> setText ("No select");
-	                break;
+	the_mscHandler	-> getMode (&is_audio, &coding);
+	if (is_audio) {
+	   if (coding == 077) 
+	      dabMode -> setText ("DAB +");
+	   else
+	      dabMode -> setText ("DAB");
+	   language	= the_mscHandler	-> getLanguage ();
+	   type		= the_mscHandler	-> getType ();
+	   programName		-> setText (a);
+	   nameofLanguage	-> setText (get_programm_language_string (language));
+	   programType	-> setText (get_programm_type_string (type));
+	   showLabel (" ");
 	}
-
-	nameofLanguage	-> setText (get_programm_language_string (language));
-	programType	-> setText (get_programm_type_string (type));
+	else {
+	   programName		-> setText (" ");
+	   nameofLanguage	-> setText (" ");
+	   programType		-> setText (" ");
+	   switch (coding) {
+	      default:
+	         showLabel (QString ("unimplemented Data"));
+	         break;
+	      case 5:
+	         showLabel (QString ("Transparent Channel not implemented"));
+	         break;
+	      case 60:
+	         showLabel (QString ("MOT partially implemented"));
+	         break;
+	      case 59:
+	         showLabel (QString ("Embedded IP: UDP data sent to 8888"));
+	         break;
+	   }
+	}
 }
 
 void	RadioInterface::set_dumping (void) {
@@ -1305,7 +1319,6 @@ void	RadioInterface::setSynced	(char b) {
 }
 
 void	RadioInterface::showLabel	(QString s) {
-	fprintf (stderr, "calling showLable\n");
 	dynamicLabel	-> setText (s);
 }
 

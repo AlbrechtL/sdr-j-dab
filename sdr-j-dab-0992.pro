@@ -8,12 +8,12 @@ TEMPLATE	= app
 TARGET		= sdr-j-dab-0.992
 QT		+= widgets
 CONFIG		+= console
-#QMAKE_CFLAGS	+= -flto  -ffast-math
-#QMAKE_CXXFLAGS	+= -flto  -ffast-math
-#QMAKE_LFLAGS	+= -flto 
-QMAKE_CFLAGS	+= -ffast-math -g
-QMAKE_CXXFLAGS	+= -ffast-math -g
-QMAKE_LFLAGS	+= -g
+QMAKE_CFLAGS	+= -flto  -ffast-math
+QMAKE_CXXFLAGS	+= -flto  -ffast-math
+QMAKE_LFLAGS	+= -flto 
+#QMAKE_CFLAGS	+= -ffast-math -g
+#QMAKE_CXXFLAGS	+= -ffast-math -g
+#QMAKE_LFLAGS	+= -g
 #CONFIG		+= NO_SSE_SUPPORT 
 DEPENDPATH += . \
 	      ./src \
@@ -127,13 +127,14 @@ SOURCES += ./main.cpp \
 #	and locating libraries. If you do not need a device as
 #	listed, just comment the line out.
 unix {
-CONFIG		+= dabstick
-CONFIG		+= sdrplay
-CONFIG		+= rtl_tcp
-CONFIG		+= airspy
+CONFIG		+= dabstick_osmo
+#CONFIG		+= dabstick_new
+#CONFIG		+= sdrplay
+#CONFIG		+= rtl_tcp
+#CONFIG		+= airspy
 CONFIG		+= spectrum
-DEFINES		+= MOT_BASICS__ 	# use at your own risk
-DEFINES		+= MSC_DATA__		# use at your own risk
+#DEFINES		+= MOT_BASICS__ 	# use at your own risk
+#DEFINES		+= MSC_DATA__		# use at your own risk
 DESTDIR		= ./linux-bin
 INCLUDEPATH	+= /usr/include/qwt /usr/local/include
 #LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu
@@ -164,7 +165,8 @@ LIBS		+= -lusb-1.0
 CONFIG		+= NO_SSE_SUPPORT 
 CONFIG		+= extio
 CONFIG		+= rtl_tcp
-CONFIG		+= dabstick
+#CONFIG		+= dabstick_new
+CONFIG		+= dabstick_osmo
 CONFIG		+= sdrplay
 CONFIG		+= airspy
 CONFIG		+= spectrum
@@ -192,15 +194,26 @@ spectrum {
 }
 #	devices
 #
-#	dabstick
-dabstick {
+#	dabstick_new
+dabstick_new {
 	DEFINES		+= HAVE_DABSTICK
-	INCLUDEPATH	+= ./src/input/dabstick
-	HEADERS		+= ./src/input/dabstick/dabstick.h \
-	                   ./src/input/dabstick/dongleselect.h
-	SOURCES		+= ./src/input/dabstick/dabstick.cpp \
-	                   ./src/input/dabstick/dongleselect.cpp
-	FORMS		+= ./src/input/dabstick/dabstick-widget.ui
+	INCLUDEPATH	+= ./src/input/dabstick-new
+	HEADERS		+= ./src/input/dabstick-new/dabstick.h \
+	                   ./src/input/dabstick-new/dongleselect.h
+	SOURCES		+= ./src/input/dabstick-new/dabstick.cpp \
+	                   ./src/input/dabstick-new/dongleselect.cpp
+	FORMS		+= ./src/input/dabstick-new/dabstick-widget.ui
+}
+
+#	dabstick_osmo
+dabstick_osmo {
+	DEFINES		+= HAVE_DABSTICK
+	INCLUDEPATH	+= ./src/input/dabstick-osmo
+	HEADERS		+= ./src/input/dabstick-osmo/dabstick.h \
+	                   ./src/input/dabstick-osmo/dongleselect.h
+	SOURCES		+= ./src/input/dabstick-osmo/dabstick.cpp \
+	                   ./src/input/dabstick-osmo/dongleselect.cpp
+	FORMS		+= ./src/input/dabstick-osmo/dabstick-widget.ui
 }
 #
 #	the SDRplay

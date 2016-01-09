@@ -25,6 +25,9 @@
 #include	"mot-data.h"
 #include	"gui.h"
 
+#ifdef	__MINGW32__
+#include	<ws2tcpip.h>
+#endif
 #define	SERVER	"127.0.0.1"
 #define	PORT	8888
 #define	BUFLEN	512
@@ -40,54 +43,6 @@
 static
 int8_t	interleaveDelays [] = {
 	     15, 7, 11, 3, 13, 5, 9, 1, 14, 6, 10, 2, 12, 4, 8, 0};
-
-
-//#ifdef	__MINGW32__
-//
-//      It seems that the function inet_aton is not
-//      available under Windows.
-//      Author: Paul Vixie, 1996.
-#define NS_INADDRSZ  4
-bool inet_aton4 (const char *src, struct in_addr *x) {
-char	*dst	= (char *)x;
-uint8_t tmp[NS_INADDRSZ], *tp;
-int saw_digit = 0;
-int octets = 0;
-
-	*(tp = tmp) = 0;
-	int ch;
-	while ((ch = *src++) != '\0') {
-           if (ch >= '0' && ch <= '9') {
-              uint32_t n = *tp * 10 + (ch - '0');
-	      if (saw_digit && *tp == 0)
-	         return 0;
-	      if (n > 255)
-	         return false;
-
-	      *tp = n;
-	      if (!saw_digit) {
-	         if (++octets > 4)
-	            return false;
-	         saw_digit = 1;
-	      }
-	   }
-	   else
-	   if (ch == '.' && saw_digit) {
-	      if (octets == 4)
-	         return false;
-	      *++tp = 0;
-	      saw_digit = 0;
-	   }
-	   else
-	      return 0;
-	}
-	if (octets < 4)
-	   return false;
-
-	memcpy(dst, tmp, NS_INADDRSZ);
-	return true;
-}
-//#endif
 //
 //	fragmentsize == Length * CUSize
 	mscDatagroup::mscDatagroup	(RadioInterface *mr,
@@ -140,12 +95,31 @@ int32_t i, j;
 //	todo: we should make a class for each of the
 //	recognized DSCTy values
 	if (DSCTy == 59) {	// embedded IP
+#ifdef	__MINGW32__
+	   WSADATA wsaData;
+	   int iResult	= WSAStartup (MAKEWORD (2, 2), &wsaData);
+	   if (iResult != NO_ERROR) {
+	      wprintf(L"WSAStartup failed with error: %d\n", iResult);
+	      socketAddr = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	      if (socketAddr == INVALID_SOCKET) {
+                 wprintf(L"socket failed with error: %ld\n",
+	                                WSAGetLastError());
+                 WSACleanup();
+	      }
+	   }
+	   else {
+	      si_other. sin_family	= AF_INET;
+	      si_other. sin_port	= htons (PORT);
+	      si_other. sin_addr. s_addr = inet_addr (SERVER);
+	      fprintf (stderr, "establishing server succeeded\n");
+	   }
+#else		// back in Linux country
 	   memset ((char *)(&si_other), 0, sizeof (si_other));
-	   si_other. sin_family	= AF_INET;
-	   si_other. sin_port	= htons (PORT);
 	   socketAddr		= socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	   if (socketAddr != -1) {
-	      if (inet_aton4 (SERVER, &si_other. sin_addr) == 0) {
+	      si_other. sin_family	= AF_INET;
+	      si_other. sin_port	= htons (PORT);
+	      if (inet_aton (SERVER, &si_other. sin_addr) == 0) {
 	         fprintf (stderr, "inet_aton () failed\n");
 	      }
 	      else
@@ -153,7 +127,7 @@ int32_t i, j;
 	   }
 	   else
 	      fprintf (stderr, "could not get socketAddress\n");
-	
+#endif
 	}
 	else
 	if (DSCTy == 60) 	// MOT
@@ -198,18 +172,6 @@ uint8_t	shiftRegister [9];
 int16_t	Data [fragmentSize];
 int16_t	i, j;
 
-	switch (DSCTy) {
-	   default:
-	   case 5:
-	      showLabel (QString ("Transparent Channel not implemented"));
-	      break;
-	   case 60:
-	      showLabel (QString ("MOT partially implemented"));
-	      break;
-	   case 59:
-	      showLabel (QString ("Embedded IP: UDP data sent to 8888"));
-	      break;
-	}
 	running	= true;
 	while (running) {
 	   while (Buffer -> GetRingBufferReadAvailable () < fragmentSize) {
@@ -475,6 +437,7 @@ int16_t	i;
 //	udp packet to port 8888
 void	mscDatagroup::process_udpVector (uint8_t *data, int16_t length) {
 char *message = (char *)(&(data [8]));
+#ifndef __MINGW32__
 	if (socketAddr != -1)
 	   if (sendto (socketAddr,
 	               message,
@@ -483,6 +446,21 @@ char *message = (char *)(&(data [8]));
 	               (struct sockaddr *)&si_other,
 	               sizeof (si_other)) == -1)
 	      fprintf (stderr, "sorry, send did not work\n");
+#else
+	if (socketAddr != -1) {
+	   int16_t amount = sendto (socketAddr,
+	                            message,
+	                            length - 8,
+	                            0,
+	                            (struct sockaddr *)&si_other,
+	                            sizeof (si_other));
+	   if (amount == SOCKET_ERROR) {
+	      int errorCode = WSAGetLastError ();
+	      fprintf (stderr, "send return errorcode %d\n", errorCode);
+	   }
+	}
+#endif
+	   
 }
 //
 //	MOT should be handled in a separate object (todo)
