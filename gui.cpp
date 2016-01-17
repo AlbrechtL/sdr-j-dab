@@ -1335,6 +1335,12 @@ void	RadioInterface::showMOT		(QByteArray data, int subtype) {
 	pictureLabel ->  show ();
 }
 
+void	RadioInterface::send_datagram	(char *data, int length) {
+	DSCTy_59_socket. writeDatagram (data, length,
+	                                QHostAddress ("127.0.0.1"),
+	                                8888);
+}
+
 #ifdef	HAVE_SPECTRUM
 void	RadioInterface::set_spectrumHandler (void) {
 	spectrumisShown = !spectrumisShown;

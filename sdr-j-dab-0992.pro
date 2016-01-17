@@ -6,7 +6,7 @@
 
 TEMPLATE	= app
 TARGET		= sdr-j-dab-0.992
-QT		+= widgets
+QT		+= widgets network
 CONFIG		+= console
 QMAKE_CFLAGS	+= -flto  -ffast-math
 QMAKE_CXXFLAGS	+= -flto  -ffast-math
@@ -129,12 +129,12 @@ SOURCES += ./main.cpp \
 unix {
 CONFIG		+= dabstick_osmo
 #CONFIG		+= dabstick_new
-#CONFIG		+= sdrplay
-#CONFIG		+= rtl_tcp
-#CONFIG		+= airspy
+CONFIG		+= sdrplay
+CONFIG		+= rtl_tcp
+CONFIG		+= airspy
 CONFIG		+= spectrum
-#DEFINES		+= MOT_BASICS__ 	# use at your own risk
-#DEFINES		+= MSC_DATA__		# use at your own risk
+DEFINES		+= MOT_BASICS__ 	# use at your own risk
+DEFINES		+= MSC_DATA__		# use at your own risk
 DESTDIR		= ./linux-bin
 INCLUDEPATH	+= /usr/include/qwt /usr/local/include
 #LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu

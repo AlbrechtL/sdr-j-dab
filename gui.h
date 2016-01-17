@@ -29,16 +29,17 @@
 
 #include	"dab-constants.h"
 #include	<QDialog>
+#include	<QUdpSocket>
 #include	"ui_sdrgui.h"
-#include	<qwt.h>
-#include	<qwt_slider.h>
-#include	<qwt_plot.h>
-#include	<qwt_plot_curve.h>
-#include	<qwt_plot_marker.h>
-#include	<qwt_plot_grid.h>
-#include	<qwt_dial.h>
-#include	<qwt_dial_needle.h>
-#include	<qwt_plot_spectrogram.h>
+//#include	<qwt.h>
+//#include	<qwt_slider.h>
+//#include	<qwt_plot.h>
+//#include	<qwt_plot_curve.h>
+//#include	<qwt_plot_marker.h>
+//#include	<qwt_plot_grid.h>
+//#include	<qwt_dial.h>
+//#include	<qwt_dial_needle.h>
+//#include	<qwt_plot_spectrogram.h>
 #include	<QTimer>
 #include	<sndfile.h>
 #include	<QWheelEvent>
@@ -140,6 +141,7 @@ private:
 const	char		*get_programm_type_string (uint8_t);
 const	char		*get_programm_language_string (uint8_t);
 	QLabel		*pictureLabel;
+	QUdpSocket	DSCTy_59_socket;
 private slots:
 	void	setStart		(void);
 	void	updateTimeDisplay	(void);
@@ -175,6 +177,7 @@ public slots:
 	void	setSynced		(char);
 	void	showLabel		(QString);
 	void	showMOT			(QByteArray, int);
+	void	send_datagram		(char *, int);
 #ifdef	HAVE_SPECTRUM
 	void	showSpectrum		(int);
 	void	set_spectrumHandler	(void);
