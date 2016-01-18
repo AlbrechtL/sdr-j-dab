@@ -132,6 +132,7 @@ CONFIG		+= dabstick_osmo
 CONFIG		+= sdrplay
 CONFIG		+= rtl_tcp
 CONFIG		+= airspy
+#CONFIG		+= airspy-exp
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__ 	# use at your own risk
 DEFINES		+= MSC_DATA__		# use at your own risk
@@ -169,9 +170,10 @@ CONFIG		+= rtl_tcp
 CONFIG		+= dabstick_osmo
 CONFIG		+= sdrplay
 CONFIG		+= airspy
+#CONFIG		+= airspy-exp
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__
-DEFINES		+= MSC_DATA__		# use at your own risk
+#DEFINES		+= MSC_DATA__		# use at your own risk
 }
 
 #	Unfortunately, under Windows Mingw does not provide SSE support
@@ -241,6 +243,18 @@ airspy {
 	                   /usr/local/include/libairspy/airspy.h
 	SOURCES		+= ./src/input/airspy/airspy-handler.cpp 
 	FORMS		+= ./src/input/airspy/airspy-widget.ui
+}
+
+# airspy support 
+#
+airspy-exp {
+	DEFINES		+= HAVE_AIRSPY
+	INCLUDEPATH	+= ./src/input/airspy-exp \
+	                   /usr/local/include/libairspy
+	HEADERS		+= ./src/input/airspy-exp/airspy-handler.h \
+	                   /usr/local/include/libairspy/airspy.h
+	SOURCES		+= ./src/input/airspy-exp/airspy-handler.cpp 
+	FORMS		+= ./src/input/airspy-exp/airspy-widget.ui
 }
 
 #
