@@ -42,10 +42,9 @@ public:
 	                                 DSPCOMPLEX	*,
 	                                 RadioInterface *);
 		~ofdmDecoder		(void);
-	void	processBlock_0		(DSPCOMPLEX *);
+	int16_t	processBlock_0		(DSPCOMPLEX *);
 	void	processToken		(DSPCOMPLEX *, int16_t *, int32_t n);
 	int16_t	get_snr			(DSPCOMPLEX *);
-	int16_t	coarseCorrector		(void);
 	int16_t	getStrength		(void);
 	void	set_displayToken	(int16_t);
 private:
@@ -56,17 +55,14 @@ private:
 	int32_t		T_s;
 	int32_t		T_u;
 	int32_t		carriers;
-	int16_t		getMiddle	(float *);
 	int32_t	delta;
 	DSPCOMPLEX	*phaseReference;
 	common_fft	*fft_handler;
 	DSPCOMPLEX	*fft_buffer;
-	float		*syncBuffer;
 	permVector	*myMapper;
 	phaseTable	*phasetable;
 	int32_t		blockIndex;
 	int16_t		iqCount;
-	int16_t		coarseOffset;
 	int16_t		displayToken;
 	int16_t		snrCount;
 	int16_t		snr;

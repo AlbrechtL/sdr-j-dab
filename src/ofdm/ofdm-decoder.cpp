@@ -43,8 +43,6 @@
 	this	-> T_u			= params	-> T_u;
 	this	-> carriers		= params	-> K;
 
-	this	-> syncBuffer		= new float [T_u];
-
 	connect (this, SIGNAL (showIQ (int)),
 	         mr, SLOT (showIQ (int)));
 	this	-> delta	= T_s - T_u;
@@ -53,7 +51,6 @@
 	phaseReference		= new DSPCOMPLEX [T_u];
 	myMapper		= new permVector (params);
 	iqCount			= 0;
-	coarseOffset		= 0;
 	displayToken		= 3;
 //
 	connect (this, SIGNAL (show_snr (int)),
@@ -66,25 +63,38 @@
 	delete	fft_handler;
 	delete	phaseReference;
 	delete	myMapper;
-	delete []	syncBuffer;
 }
 //	in practive, we use the "incoming" block
 //	and use its data to generate the prs
-void	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi) {
+int16_t	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi) {
 DSPCOMPLEX	*v = (DSPCOMPLEX *)alloca (T_u * sizeof (DSPCOMPLEX));
-int16_t	i;
+int16_t	i, index = 0;
+float	Min	= 1000;
 
 	memcpy (fft_buffer, vi, T_u * sizeof (DSPCOMPLEX));
 	fft_handler	-> do_FFT ();
+
+	memcpy (phaseReference, fft_buffer, T_u * sizeof (DSPCOMPLEX));
+//
+//	as a side effect we "compute" an estimate for the
+//	coarse offset
+	for (i = 0; i < 32; i ++) {
+	   if (abs (fft_buffer [T_u - i - 1]) < Min) {
+	      Min	= abs (fft_buffer [T_u - i - 1]);
+	      index	= - i - 1;
+	   }
+	   if (abs (fft_buffer [i]) < Min) {
+	      Min	= abs (fft_buffer [i]);
+	      index	= i;
+	   }
+	}
 
 	snr		= 0.7 * snr + 0.3 * get_snr (fft_buffer);
 	if (++snrCount > 10) {
 	   show_snr (snr);
 	   snrCount = 0;
 	}
-	memcpy (phaseReference, fft_buffer, T_u * sizeof (DSPCOMPLEX));
-	for (i = 0; i < T_u; i ++)
-	   syncBuffer [i] = abs (fft_buffer [i]);
+	return index;
 }
 
 //	for the other blocks of data, the first step is to go from
@@ -100,9 +110,6 @@ static		int cnt	= 0;
 //
 //	Note that "mapIn" maps to -carriers / 2 .. carriers / 2
 //	we did not set the fft output to low .. high
-	if (blkno < SYNC_LENGTH)
-	   for (i = 0; i < T_u; i ++)
-	      syncBuffer [i] +=  abs (fft_buffer [i]);
 
 	for (i = 0; i < carriers; i ++) {
 	   int16_t	index	= myMapper -> mapIn (i);
@@ -112,9 +119,10 @@ static		int cnt	= 0;
 	   DSPCOMPLEX	r1 = fft_buffer [index] * conj (phaseReference [index]);
 	   phaseReference [index] = fft_buffer [index];
 	   DSPFLOAT ab1	= jan_abs (r1);
-//	Recall:  positive = 0, negative = 1
-	   ibits [i]		= real (r1) / ab1 * 255.0;
-	   ibits [carriers + i] = imag (r1) / ab1 * 255.0;
+//	Recall:  with this viterbi decoder
+//	we have 127 = max pos, -127 = max neg
+	   ibits [i]		= - real (r1) / ab1 * 127.0;
+	   ibits [carriers + i] = - imag (r1) / ab1 * 127.0;
 	}
 //
 //	and, from time to time we show some clouds.
@@ -132,55 +140,6 @@ static		int cnt	= 0;
 	      cnt = 0;
 	   }
 	}
-}
-
-int16_t	ofdmDecoder::coarseCorrector (void) {
-	coarseOffset 	= getMiddle	(syncBuffer);
-	return coarseOffset;
-}
-
-//
-int16_t	ofdmDecoder::getMiddle (float *v) {
-int16_t		i;
-DSPFLOAT	sum = 0;
-int16_t		maxIndex = 0;
-DSPFLOAT	oldMax	= 0;
-float	s1	= 0;
-int16_t		base1	= 0;
-	for (i = (T_u - carriers) / 2;
-	     i < (T_u + carriers) / 2; i ++)
-	   s1 += v [(T_u / 2 + i) % T_u];
-	s1 /= carriers;
-//
-//	we are looking for the (i, i + carriers + 1) combination
-//	with power less than threshold
-	for (i = (T_u - carriers) / 2 - 50;
-	     i < (T_u - carriers) / 2 + 50; i ++)
-	   if (v [(T_u / 2 + i) % T_u] +
-	                  v [(T_u / 2 + carriers + i + 1) % T_u] < s1 / 2)
-	   base1 = i + 1 + (T_u - carriers) / 2;
-
-//	basic sum over K carriers that are - most likely -
-//	in the range
-//	The range in which the carrier should be is
-//	T_u / 2 - K / 2 .. T_u / 2 + K / 2
-//	We first determine an initial sum
-	for (i = (T_u -  carriers) / 2 - 50;
-	                 i < (T_u + carriers) / 2 - 50; i ++)
-	   sum += v [(T_u / 2 + i) % T_u];
-	
-//	Now a moving sum, look for a maximum within a reasonable
-//	range (around (T_u - K) / 2, the start of the useful frequencies)
-	for (i = (T_u - carriers) / 2 - 50;
-	              i < (T_u - carriers) / 2 + 50; i ++) {
-	   sum -= abs (v [(T_u / 2 + i) % T_u]);
-	   sum += abs (v [(T_u / 2 + i + carriers) % T_u]);
-	   if (sum > oldMax) {
-	      sum = oldMax;
-	      maxIndex = i;
-	   }
-	}
-	return  (base1 + maxIndex - (T_u - carriers) / 2) / 2;
 }
 //
 //

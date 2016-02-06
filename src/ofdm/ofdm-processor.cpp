@@ -364,7 +364,16 @@ OFDM_PRS:
 	                     T_u - ofdmBufferIndex, coarseCorrector + fineCorrector);
 //
 //	block0 will set the phase reference for further decoding
-	   my_ofdmDecoder  -> processBlock_0 (ofdmBuffer);
+	int correction =   my_ofdmDecoder  -> processBlock_0 (ofdmBuffer);
+static int waar	= 0;
+
+	if ((++ waar > 2) && f2Correction) {
+	   coarseCorrector	+= correction * params -> carrierDiff;
+	   if (abs (coarseCorrector) > 30 * params -> carrierDiff)
+	      coarseCorrector = 0;
+	   waar = 0;
+	}
+
 //
 //	after block 0, we will just read in the other (params -> L - 1) blocks
 //	we do it in two steps:
@@ -425,21 +434,6 @@ OFDM_SYMBOLS:
 //	so, we skipped Tnull samples, so the real start should be T_g
 //	samples away
 	   counter	= 0;
-
-static int waar	= 0;
-static	int	corrector	= 1;
-static	int	oldCorrection	= 0;
-
-	   if ((++ waar > 6) && f2Correction) {
-	      int correction	= my_ofdmDecoder -> coarseCorrector ();
-	      if (oldCorrection == correction) {
-	         correction += corrector;
-	         corrector = -corrector;
-	      }
-	      oldCorrection = correction;
-	      coarseCorrector	+= correction * params -> carrierDiff;
-	      waar = 0;
-	   }
 
 	   if (fineCorrector > params -> carrierDiff / 2) {
 	      coarseCorrector += params -> carrierDiff;

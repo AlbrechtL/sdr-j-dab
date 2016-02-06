@@ -5,7 +5,7 @@
 ######################################################################
 
 TEMPLATE	= app
-TARGET		= sdr-j-dab-0.992
+TARGET		= sdr-j-dab-0.993
 QT		+= widgets network
 CONFIG		+= console
 QMAKE_CFLAGS	+= -flto  -ffast-math

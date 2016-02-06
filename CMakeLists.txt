@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 2.8.11 )
 set (CMAKE_BUILD_TYPE Release )
-set (objectName sdr-j-dabreceiver-0.99)
+set (objectName sdr-j-dabreceiver-0.993)
 set ( CMAKE_INSTALL_PREFIX . )
 add_definitions ( -Wall)
 ######################################################################
