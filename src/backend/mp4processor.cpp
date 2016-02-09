@@ -143,7 +143,7 @@ uint8_t	temp	= 0;
 }
 //
 bool	mp4Processor::processSuperframe (uint8_t frameBytes [],
-	                                 int16_t bo) {
+	                                 int16_t base) {
 uint8_t		num_aus;
 int16_t		i, j, k;
 int16_t		nErrors	= 0;
@@ -157,102 +157,78 @@ uint16_t	mpegSurround;
 int32_t		outSamples	= 0;
 int32_t		tmp		= 0;
 
+/**	apply reed-solomon error repar
+  *	OK, what we now have is a vector with RSDims * 120 uint8_t's
+  *	Output is a vector with RSDims * 110 uint8_t's
+  */
+	for (j = 0; j < RSDims; j ++) {
+	   int16_t ler	= 0;
+	   for (k = 0; k < 120; k ++) 
+	      rsIn [k] = frameBytes [(base + j + k * RSDims) % (RSDims * 120)];
+	   ler = rsDecoder. dec (rsIn, rsOut, 135);
+	   if (ler > 0) {
+//	      fprintf (stderr, "corrected %d errors\n", ler);
+	      nErrors += ler;
+	   }
+	   else
+	   if (ler < 0) {
+//	      fprintf (stderr, "unrecoverable errors\n");
+	      return false;
+	   }
+	   for (k = 0; k < 110; k ++) 
+	      outVector [j + k * RSDims] = rsOut [k];
+	}
+//
+//	OK, the result is N * 110 * 8 bits 
 //	bits 0 .. 15 is firecode
 //	bit 16 is unused
-	dacRate		= (frameBytes [bo + 2] >> 6) & 01;	// bit 17
-	sbrFlag		= (frameBytes [bo + 2] >> 5) & 01;	// bit 18
-	aacChannelMode	= (frameBytes [bo + 2] >> 4) & 01;	// bit 19
-	psFlag		= (frameBytes [bo + 2] >> 3) & 01;	// bit 20
-	mpegSurround	= (frameBytes [bo + 2] & 07);		// bits 21 .. 23
+	dacRate		= (outVector [2] >> 6) & 01;	// bit 17
+	sbrFlag		= (outVector [2] >> 5) & 01;	// bit 18
+	aacChannelMode	= (outVector [2] >> 4) & 01;	// bit 19
+	psFlag		= (outVector [2] >> 3) & 01;	// bit 20
+	mpegSurround	= (outVector [2] & 07);		// bits 21 .. 23
 
 	switch (2 * dacRate + sbrFlag) {
 	   default:		// cannot happen
-//	it actually happens!!!
-//	      fprintf (stderr, "serious error in frame\n");
-	      return false;
 	   case 0:
 	      num_aus = 4;
 	      au_start [0] = 8;
-	      au_start [1] = frameBytes [bo + 3] * 16 +
-	                     (frameBytes [bo + 4] >> 4);
-	      au_start [2] = (frameBytes [bo + 4] & 0xf) * 256 +
-	                      frameBytes [bo + 5];
-	      au_start [3] = frameBytes [bo + 6] * 16 +
-	                     (frameBytes [bo + 7] >> 4);
+	      au_start [1] = outVector [3] * 16 + (outVector [4] >> 4);
+	      au_start [2] = (outVector [4] & 0xf) * 256 + outVector [5];
+	      au_start [3] = outVector [6] * 16 + (outVector [7] >> 4);
 	      au_start [4] = 110 *  (bitRate / 8);
-	      if ((au_start [3] >= au_start [4]) ||
-	          (au_start [2] >= au_start [3]) ||
-	          (au_start [1] >= au_start [2])) {
-//	         fprintf (stderr, "serious error in frame\n");
-	         return false;
-	      }
 	      break;
 //
 	   case 1:
 	      num_aus = 2;
 	      au_start [0] = 5;
-	      au_start [1] = frameBytes [bo + 3] * 16 +
-	                     (frameBytes [bo + 4] >> 4);
-	      au_start [2] = 110 *  (bitRate / 8);
-	      if ((au_start [1] >= au_start [2])) {
-//	         fprintf (stderr, "serious error in frame\n");
-	         return false;
-	      }
+	      au_start [1] = outVector [3] * 16 + (outVector [4] >> 4);
+	      au_start [2] = 110 * (bitRate / 8);
 	      break;
 //
 	   case 2:
 	      num_aus = 6;
 	      au_start [0] = 11;
-	      au_start [1] = frameBytes [bo + 3] * 16 +
-	                     (frameBytes [bo + 4] >> 4);
-	      au_start [2] = (frameBytes [bo + 4] & 0xf) * 256 +
-	                     frameBytes [bo + 5];
-	      au_start [3] = frameBytes [bo + 6] * 16 +
-	                     (frameBytes [bo + 7] >> 4);
-	      au_start [4] = (frameBytes [bo + 7] & 0xf) * 256 +
-	                     frameBytes [bo + 8];
-	      au_start [5] = frameBytes [bo + 9] * 16 +
-	                     (frameBytes [bo + 10] >> 4);
+	      au_start [1] = outVector [3] * 16 + (outVector [4] >> 4);
+	      au_start [2] = (outVector [4] & 0xf) * 256 + outVector [5];
+	      au_start [3] = outVector [6] * 16 + (outVector [7] >> 4);
+	      au_start [4] = (outVector [7] & 0xf) * 256 +
+	                     outVector [8];
+	      au_start [5] = outVector [9] * 16 +
+	                     (outVector [10] >> 4);
 	      au_start [6] = 110 *  (bitRate / 8);
-	      if ((au_start [5] >= au_start [6]) ||
-	          (au_start [4] >= au_start [5]) ||
-	          (au_start [3] >= au_start [4]) ||
-	          (au_start [2] >= au_start [3]) ||
-	          (au_start [1] >= au_start [2])) {
-//	         fprintf (stderr, "serious error in frame\n");
-	         return false;
-	      }
 	      break;
 //
 	   case 3:
 	      num_aus = 3;
 	      au_start [0] = 6;
-	      au_start [1] = frameBytes [bo + 3] * 16 +
-	                     (frameBytes [bo + 4] >> 4);
-	      au_start [2] = (frameBytes [bo + 4] & 0xf) * 256 +
-	                     frameBytes [bo + 5];
+	      au_start [1] = outVector [3] * 16 + (outVector [4] >> 4);
+	      au_start [2] = (outVector [4] & 0xf) * 256 +
+	                     outVector [5];
 	      au_start [3] = 110 * (bitRate / 8);
-	      if ((au_start [2] >= au_start [3]) ||
-	          (au_start [1] >= au_start [2])) {
-//	         fprintf (stderr, "serious error in frame\n");
-	         return false;
-	      }
 	      break;
 	}
 //
-//	apply reed-solomon error repar
-//	OK, what we now have is a vector with RSDims * 120 uint8_t's
-//	the superframe, containing parity bytes for error repair
-//	take into account the interleaving that is applied.
-	for (j = 0; j < RSDims; j ++) {
-	   for (k = 0; k < 120; k ++) 
-	      rsIn [k] = frameBytes [(bo + j + k * RSDims) % (RSDims * 120)];
-	   nErrors += rsDecoder. dec (rsIn, rsOut);
-	   for (k = 0; k < 110; k ++) 
-	      outVector [j + k * RSDims] = rsOut [k];
-	}
-//
-//	OK, the result is N * 110 * 8 bits (still single bit per byte!!!)
 //	extract the AU'si and prepare a buffer, sufficiently
 //	long for conversion to PCM samples
 	for (i = 0; i < num_aus; i ++) {
@@ -261,13 +237,16 @@ int32_t		tmp		= 0;
 	   uint8_t theAU [2 * 960];	// sure, large enough
 	   memset (theAU, 0, sizeof (theAU));
 //
-//	The crc takes the two last bytes from the au vector
+//	The crc takes the two last bytes from the au vector,
+//	but first some - hopefully superfluous - sanity checks
 	   if (au_start [i + 1] < au_start [i]) {
+//	should not happen, all errors were corrected
 //	      fprintf (stderr, "%d %d\n", au_start [i + 1], au_start [i]);
 	      return false;
 	   }
 	   aac_frame_length = au_start [i + 1] - au_start [i] - 2;
 	   if ((aac_frame_length >= 960) || (aac_frame_length < 0)) {
+//	should not happen, all errors were corrected
 //	      fprintf (stderr, "serious error in frame, framelength = %d\n",
 //	                            aac_frame_length);
 	      return false;

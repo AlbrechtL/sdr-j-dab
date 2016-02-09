@@ -369,7 +369,7 @@ static int waar	= 0;
 
 	if ((++ waar > 2) && f2Correction) {
 	   coarseCorrector	+= correction * params -> carrierDiff;
-	   if (abs (coarseCorrector) > 30 * params -> carrierDiff)
+	   if (abs (coarseCorrector) > Khz (45))
 	      coarseCorrector = 0;
 	   waar = 0;
 	}
