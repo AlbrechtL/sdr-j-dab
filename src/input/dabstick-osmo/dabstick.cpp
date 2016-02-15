@@ -107,7 +107,8 @@ int16_t	i;
 	lastFrequency		= KHz (94700);	// just a dummy
 	this	-> sampleCounter= 0;
 	this	-> vfoOffset	= 0;
-	gains			= NULL;
+    gains			= NULL;
+    CurrentManualGain	= 0;
 
 #ifdef	__MINGW32__
 	const char *libraryString = "rtlsdr.dll";
@@ -168,9 +169,9 @@ int16_t	i;
 	gains		= new int [gainsCount];
 	gainsCount = rtlsdr_get_tuner_gains (device, gains);
 	for (i = gainsCount; i > 0; i--)
-		fprintf(stderr, "%.1f ", gains [i - 1] / 10.0);
-	rtlsdr_set_tuner_gain_mode (device, 1);
-	rtlsdr_set_tuner_gain (device, gains [gainsCount / 2]);
+        fprintf(stderr, "%.1f ", gains [i - 1] / 10.0);
+    //rtlsdr_set_tuner_gain_mode (device, 1);
+    //rtlsdr_set_tuner_gain (device, gains [gainsCount / 2]);
 
 	_I_Buffer		= new RingBuffer<uint8_t>(1024 * 1024);
 	dabstickSettings	-> beginGroup ("dabstickSettings");
@@ -188,7 +189,12 @@ int16_t	i;
 	         this, SLOT (set_fCorrection  (int)));
 	connect (KhzOffset, SIGNAL (valueChanged (int)),
 	         this, SLOT (set_KhzOffset (int)));
-	
+	connect (checkAgc, SIGNAL (stateChanged (int)),
+	         this, SLOT (setAgc (int)));
+
+    // Switch on AGC by default
+    checkAgc->setChecked(true);
+
 	*success 		= true;
 	return;
 
@@ -282,14 +288,14 @@ void	dabStick::stopReader		(void) {
 }
 //
 void	dabStick::setExternalGain	(int gain) {
-static int	oldGain	= 0;
-	if (gain == oldGain)
+    if (gain == CurrentManualGain)
 	   return;
 	if ((gain < 0) || (gain >= gainsCount))
 	   return;
 
-	oldGain	= gain;
+    CurrentManualGain	= gain;
 	rtlsdr_set_tuner_gain (device, gains [gainsCount - gain]);
+    checkAgc->setChecked(false);
 }
 //
 //	correction is in Hz
@@ -378,6 +384,13 @@ bool	dabStick::load_rtlFunctions (void) {
 	   return false;
 	}
 
+	rtlsdr_set_agc_mode =
+	    (pfnrtlsdr_set_agc_mode)GETPROCADDRESS (Handle, "rtlsdr_set_agc_mode");
+	if (rtlsdr_set_agc_mode == NULL) {
+	   fprintf (stderr, "Could not find rtlsdr_set_agc_mode\n");
+	   return false;
+	}
+	
 	rtlsdr_get_tuner_gains		= (pfnrtlsdr_get_tuner_gains)
 	                     GETPROCADDRESS (Handle, "rtlsdr_get_tuner_gains");
 	if (rtlsdr_get_tuner_gains == NULL) {
@@ -483,5 +496,19 @@ int16_t	dabStick::maxGain	(void) {
 
 int16_t	dabStick::bitDepth	(void) {
 	return 8;
+}
+
+void	dabStick::setAgc	(int state) {
+	if (checkAgc -> isChecked ())
+    {
+       //(void)rtlsdr_set_agc_mode (device, 1);
+        rtlsdr_set_tuner_gain_mode (device, 0);
+    }
+	else
+    {
+       //(void)rtlsdr_set_agc_mode (device, 0);
+        rtlsdr_set_tuner_gain_mode (device, 1);
+        rtlsdr_set_tuner_gain (device, gains [gainsCount - CurrentManualGain]);
+    }
 }
 
