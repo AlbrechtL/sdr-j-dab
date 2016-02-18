@@ -240,6 +240,8 @@ int32_t		syncBufferIndex;
 int32_t		syncBufferSize	= syncBufferMask + 1;
 float		envBuffer	[syncBufferMask + 1];
 float		signalLevel;
+int16_t		previous_1	= 1000;
+int16_t		previous_2	= 999;
 
 	running		= true;
 	fineCorrector	= 0;
@@ -278,7 +280,6 @@ notSynced:
 SyncOnNull:
 	   counter	= 0;
 	   setSynced (false);
-static	DSPFLOAT	lowest	= 0;
 	   while (currentStrength / 50  > 0.40 * sLevel) {
 	      DSPCOMPLEX sample	=
 	                      getSample (coarseCorrector + fineCorrector);
@@ -292,7 +293,6 @@ static	DSPFLOAT	lowest	= 0;
 	      if (counter > 2 * T_s)	// hopeless
 	         goto notSynced;
 	   }
-	   lowest	= currentStrength;
 
 //	Now it is waiting for the end of the dip
 SyncOnEndNull:
@@ -302,8 +302,6 @@ SyncOnEndNull:
 //	update the levels
 	      currentStrength += envBuffer [syncBufferIndex] -
 	                        envBuffer [(syncBufferIndex + syncBufferSize - 50) & syncBufferMask];
-	      if (currentStrength < lowest)
-	         lowest = currentStrength;
 	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
 	      counter	++;
 	      if (counter > 3 * T_s)	// hopeless
@@ -364,16 +362,20 @@ OFDM_PRS:
 	                     T_u - ofdmBufferIndex, coarseCorrector + fineCorrector);
 //
 //	block0 will set the phase reference for further decoding
-	int correction =   my_ofdmDecoder  -> processBlock_0 (ofdmBuffer);
-static int waar	= 0;
+	int16_t correction =   my_ofdmDecoder  -> processBlock_0 (ofdmBuffer);
 
-	if ((++ waar > 2) && f2Correction) {
-	   coarseCorrector	+= correction * params -> carrierDiff;
-	   if (abs (coarseCorrector) > Khz (45))
-	      coarseCorrector = 0;
-	   waar = 0;
+	if (f2Correction) {
+	   if ((correction == 0) && (previous_1 == 0) && (previous_2 == 0))
+	      f2Correction == false;
+	   else
+	   if (correction != 100) {	// finding an offset succeeded
+	      coarseCorrector	+= correction * params -> carrierDiff;
+	      if (abs (coarseCorrector) > Khz (35))
+	         coarseCorrector = 0;
+	      previous_2	= previous_1;
+	      previous_1	= correction;
+	   }
 	}
-
 //
 //	after block 0, we will just read in the other (params -> L - 1) blocks
 //	we do it in two steps:
