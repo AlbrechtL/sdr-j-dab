@@ -120,13 +120,11 @@ float	Min	= 1000;
 	                      conj (fft_buffer [(index + 5) % T_u])) / M_PI;
 	   float a4	= arg (fft_buffer [(index + 5) % T_u] *
 	                      conj (fft_buffer [(index + 6) % T_u])) / M_PI;
-	   fprintf (stderr, " %d\t%f\t%f\t%f\t%f (%f %f)\n",
+	   fprintf (stderr, " %d\t%f\t%f\t%f\t%f (%f)\n",
 	                    index - T_u,
 	                    abs (a1), abs (a2), abs (a3), abs (a4),
 	                    abs (arg (fft_buffer [(index + 1) % T_u] *
-	                         conj (fft_buffer [(index + 2) % T_u])) / M_PI),
-	                    abs (arg (fft_buffer [(index + 16 + 1) % T_u] *
-	                         conj (fft_buffer [(index + 16 + 2) % T_u])) / M_PI));
+	                         conj (fft_buffer [(index + 2) % T_u])) / M_PI));
 	}
 #endif
 	if (index == 100)

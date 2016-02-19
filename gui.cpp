@@ -194,6 +194,8 @@ int16_t	i, k;
 //	The connects of the GUI to the handlers
 	connect (ensembleDisplay, SIGNAL (clicked (QModelIndex)),
 	              this, SLOT (selectService (QModelIndex)));
+	connect (ensembleDisplay, SIGNAL (activated (QModelIndex)),
+	              this, SLOT (selectService (QModelIndex)));
 	connect	(modeSelector, SIGNAL (activated (const QString &)),
 	              this, SLOT (selectMode (const QString &)));
 	connect (startButton, SIGNAL (clicked (void)),

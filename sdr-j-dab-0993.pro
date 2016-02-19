@@ -15,7 +15,7 @@ QMAKE_LFLAGS	+= -flto
 #QMAKE_CXXFLAGS	+= -ffast-math -g
 #QMAKE_LFLAGS	+= -g
 #CONFIG		+= NO_SSE_SUPPORT 
-#DEFINES	+= SHOW_COARSE_OFFSET_PROGRESS
+DEFINES	+= SHOW_COARSE_OFFSET_PROGRESS
 DEPENDPATH += . \
 	      ./src \
 	      ./includes \
