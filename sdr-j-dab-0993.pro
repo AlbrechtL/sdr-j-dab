@@ -15,6 +15,7 @@ QMAKE_LFLAGS	+= -flto
 #QMAKE_CXXFLAGS	+= -ffast-math -g
 #QMAKE_LFLAGS	+= -g
 #CONFIG		+= NO_SSE_SUPPORT 
+#DEFINES	+= SHOW_COARSE_OFFSET_PROGRESS
 DEPENDPATH += . \
 	      ./src \
 	      ./includes \
@@ -135,7 +136,7 @@ CONFIG		+= airspy
 #CONFIG		+= airspy-exp
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__ 	# use at your own risk
-DEFINES		+= MSC_DATA__		# use at your own risk
+#DEFINES		+= MSC_DATA__		# use at your own risk
 DESTDIR		= ./linux-bin
 INCLUDEPATH	+= /usr/include/qwt /usr/local/include
 #LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu

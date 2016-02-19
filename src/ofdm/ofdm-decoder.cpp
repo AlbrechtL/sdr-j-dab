@@ -29,6 +29,9 @@
 #include	"phasetable.h"
 
 #define	SYNC_LENGTH	15
+//
+//	The search range for the coarse frequency offset is
+#define	SEARCH_RANGE	36
 
 	ofdmDecoder::ofdmDecoder	(DabParams	*p,
 	                                 RingBuffer<DSPCOMPLEX> *iqBuffer,
@@ -65,27 +68,27 @@
 	delete	myMapper;
 }
 
-#define	RANGE	36
-int16_t	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi) {
-DSPCOMPLEX	*v = (DSPCOMPLEX *)alloca (T_u * sizeof (DSPCOMPLEX));
-int16_t	i, j, index = 100;
+int16_t	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi, bool flag) {
+int16_t	i, index = 100;
 float	Min	= 1000;
-int16_t	ranges [2 * RANGE];
 
 	memcpy (fft_buffer, vi, T_u * sizeof (DSPCOMPLEX));
 	fft_handler	-> do_FFT ();
 
 	memcpy (phaseReference, fft_buffer, T_u * sizeof (DSPCOMPLEX));
-//
-//	as a side effect we "compute" an estimate for the
-//	coarse offset
-	for (i = 0; i < RANGE; i ++) {
-	   ranges [2 * i] = i;
-	   ranges [2 * i + 1] = -i;
+
+	snr		= 0.7 * snr + 0.3 * get_snr (fft_buffer);
+	if (++snrCount > 10) {
+	   show_snr (snr);
+	   snrCount = 0;
 	}
 
-	for (j = 0; j < 2 * RANGE; j ++) {
-	   i = T_u + ranges [j];
+	if (!flag)		// no need to synchronize further
+	   return 0;
+//	as a side effect we "compute" an estimate for the
+//	coarse offset
+	
+	for (i = T_u  - SEARCH_RANGE; i < T_u + SEARCH_RANGE; i ++) {
 	   if (abs (fft_buffer [i % T_u]) < Min) {
               float a1  = arg (fft_buffer [(i + 1) % T_u] *
                                conj (fft_buffer [(i + 2) % T_u]));
@@ -107,30 +110,25 @@ int16_t	ranges [2 * RANGE];
            }
 	}
 
-//	if (index != 100) {	// check on reasonability
-//	   float a1	= arg (fft_buffer [(index + 1) % T_u] *
-//	                      conj (fft_buffer [(index + 3) % T_u])) / M_PI;
-//	   float a2	= arg (fft_buffer [(index + 3) % T_u] *
-//	                      conj (fft_buffer [(index + 4) % T_u])) / M_PI;
-//	   float a3	= arg (fft_buffer [(index + 4) % T_u] *
-//	                      conj (fft_buffer [(index + 5) % T_u])) / M_PI;
-//	   float a4	= arg (fft_buffer [(index + 5) % T_u] *
-//	                      conj (fft_buffer [(index + 6) % T_u])) / M_PI;
-//	   fprintf (stderr, " %d\t%f\t%f\t%f\t%f (%f %f)\n",
-//	                    index < RANGE ? index : index - T_u,
-//	                    abs (a1), abs (a2), abs (a3), abs (a4),
-//	                    abs (arg (fft_buffer [(index + 1) % T_u] *
-//	                         conj (fft_buffer [(index + 2) % T_u])) / M_PI),
-//	                    abs (arg (fft_buffer [(index + 16 + 1) % T_u] *
-//	                         conj (fft_buffer [(index + 16 + 2) % T_u])) / M_PI));
-//	}
-
-	snr		= 0.7 * snr + 0.3 * get_snr (fft_buffer);
-	if (++snrCount > 10) {
-	   show_snr (snr);
-	   snrCount = 0;
+#ifdef	SHOW_COARSE_OFFSET_PROGRESS
+	if (index != 100) {	// check on reasonability
+	   float a1	= arg (fft_buffer [(index + 1) % T_u] *
+	                      conj (fft_buffer [(index + 3) % T_u])) / M_PI;
+	   float a2	= arg (fft_buffer [(index + 3) % T_u] *
+	                      conj (fft_buffer [(index + 4) % T_u])) / M_PI;
+	   float a3	= arg (fft_buffer [(index + 4) % T_u] *
+	                      conj (fft_buffer [(index + 5) % T_u])) / M_PI;
+	   float a4	= arg (fft_buffer [(index + 5) % T_u] *
+	                      conj (fft_buffer [(index + 6) % T_u])) / M_PI;
+	   fprintf (stderr, " %d\t%f\t%f\t%f\t%f (%f %f)\n",
+	                    index - T_u,
+	                    abs (a1), abs (a2), abs (a3), abs (a4),
+	                    abs (arg (fft_buffer [(index + 1) % T_u] *
+	                         conj (fft_buffer [(index + 2) % T_u])) / M_PI),
+	                    abs (arg (fft_buffer [(index + 16 + 1) % T_u] *
+	                         conj (fft_buffer [(index + 16 + 2) % T_u])) / M_PI));
 	}
-
+#endif
 	if (index == 100)
 	   return 100;
 	return index - T_u;

@@ -362,7 +362,8 @@ OFDM_PRS:
 	                     T_u - ofdmBufferIndex, coarseCorrector + fineCorrector);
 //
 //	block0 will set the phase reference for further decoding
-	int16_t correction =   my_ofdmDecoder  -> processBlock_0 (ofdmBuffer);
+	int16_t correction =
+	          my_ofdmDecoder  -> processBlock_0 (ofdmBuffer, f2Correction);
 
 	if (f2Correction) {
 	   if ((correction == 0) && (previous_1 == 0) && (previous_2 == 0))

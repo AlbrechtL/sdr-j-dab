@@ -42,7 +42,7 @@ public:
 	                                 DSPCOMPLEX	*,
 	                                 RadioInterface *);
 		~ofdmDecoder		(void);
-	int16_t	processBlock_0		(DSPCOMPLEX *);
+	int16_t	processBlock_0		(DSPCOMPLEX *, bool);
 	void	processToken		(DSPCOMPLEX *, int16_t *, int32_t n);
 	int16_t	get_snr			(DSPCOMPLEX *);
 	int16_t	getStrength		(void);
