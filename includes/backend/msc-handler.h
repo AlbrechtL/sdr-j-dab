@@ -35,6 +35,7 @@
 #include	"deconvolve.h"
 #include	<stdio.h>
 #include	"dab-constants.h"
+#include	<QMutex>
 
 class	RadioInterface;
 class	dabVirtual;
@@ -42,26 +43,20 @@ class	dabVirtual;
 class mscHandler {
 public:
 		mscHandler		(RadioInterface *,
+	                                 DabParams	*,
 	                                 audioSink *,
 	                                 uint8_t);
 		~mscHandler		(void);
 	void	process_mscBlock	(int16_t *, int16_t);
-	void	setMode			(DabParams *);
-	void	set_audioChannel	(int16_t, int16_t, int16_t,
-	                                 int16_t, int16_t, int16_t, int16_t,
-	                                 int16_t, int16_t);
-	void	set_dataChannel		(int16_t, int16_t, int16_t,
-	                                 int16_t, int16_t, int16_t,
-	                                 int16_t, uint8_t,
-	                                 uint8_t, int16_t);
-	void	getMode			(bool *, uint8_t *);
-	int16_t	getChannel		(void);
+	void	set_audioChannel	(audiodata *);
+	void	set_dataChannel		(packetdata *);
 	int16_t	getLanguage		(void);
 	int16_t	getType			(void);
 	void	stop			(void);
 	void	stopProcessing		(void);
 	void	setFiles		(FILE *, FILE *);
 private:
+	QMutex	locker;
 	bool		audioService;	// dataservice if not true
 	bool		concurrencyOn;
 	dabVirtual	*dabHandler;
@@ -69,7 +64,7 @@ private:
 	int16_t		cifCount;
 	int16_t		blkCount;
 	RadioInterface	*myRadioInterface;
-	int16_t		currentChannel;
+	bool		work_to_be_done;
 	bool		newChannel;
 	int16_t		new_packetAddress;
 	int16_t		new_ASCTy;

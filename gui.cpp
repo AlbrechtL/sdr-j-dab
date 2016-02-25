@@ -164,18 +164,18 @@ int16_t	i, k;
 	mp4File		= NULL;
 
 	setModeParameters (1);
-	the_mscHandler		= new mscHandler	(this,
+	my_mscHandler		= new mscHandler	(this,
+	                                                 &dabModeParameters,
 	                                                 our_audioSink,
 	                                                 Concurrent);
-	the_ficHandler		= new ficHandler	(this,
-	                                                 the_mscHandler);
+	my_ficHandler		= new ficHandler	(this);
 //
 //	the default is:
 	the_ofdmProcessor = new ofdmProcessor (myRig,
 	                                       &dabModeParameters,
 	                                       this,
-	                                       the_mscHandler,
-	                                       the_ficHandler,
+	                                       my_mscHandler,
+	                                       my_ficHandler,
 	                                       threshold,
 #ifdef	HAVE_SPECTRUM
 	                                       spectrumBuffer,
@@ -323,23 +323,23 @@ void	RadioInterface::TerminateProcess (void) {
 	}
 
 	if (mp2File != NULL) {
-	   the_mscHandler	-> setFiles (NULL, NULL);
+	   my_mscHandler	-> setFiles (NULL, NULL);
 	   fclose (mp2File);
 	}
 
 	if (mp4File != NULL) {
-	   the_mscHandler	-> setFiles (NULL, NULL);
+	   my_mscHandler	-> setFiles (NULL, NULL);
 	   fclose (mp4File);
 	}
 
-	the_mscHandler	-> stop	();		// might be concurrent
+	my_mscHandler	-> stop	();		// might be concurrent
 	the_ofdmProcessor -> stop ();		// definitely concurrent
 	myRig		-> stopReader ();
 	our_audioSink	-> stop ();
 	dumpControlState (dabSettings);
 	delete		the_ofdmProcessor;
-	delete		the_ficHandler;
-	delete		the_mscHandler;
+	delete		my_ficHandler;
+	delete		my_mscHandler;
 	delete		myRig;
 	delete		our_audioSink;
 #ifdef	HAVE_SPECTRUM
@@ -501,7 +501,7 @@ bool	localRunning	= running;
 	Services = QStringList ();
 	ensemble. setStringList (Services);
 	ensembleDisplay		-> setModel (&ensemble);
-	the_ficHandler		-> clearEnsemble ();
+	my_ficHandler		-> clearEnsemble ();
 
 	ensembleLabel		= QString ();
 	ensembleName		-> setText (ensembleLabel);
@@ -555,7 +555,7 @@ void	RadioInterface::clearEnsemble	(void) {
 	Services = QStringList ();
 	ensemble. setStringList (Services);
 	ensembleDisplay		-> setModel (&ensemble);
-	the_ficHandler		-> clearEnsemble ();
+	my_ficHandler		-> clearEnsemble ();
 	if (autoCorrector)
 	   the_ofdmProcessor	-> coarseCorrectorOn ();
 	the_ofdmProcessor	-> reset ();
@@ -706,39 +706,61 @@ int16_t	type, language;
 bool	is_audio;
 
 QString a = ensemble. data (s, Qt::DisplayRole). toString ();
-	the_ficHandler -> setSelectedService (a);
-
-	the_mscHandler	-> getMode (&is_audio, &coding);
-	if (is_audio) {
-	   if (coding == 077) 
-	      dabMode -> setText ("DAB +");
-	   else
-	      dabMode -> setText ("DAB");
-	   language	= the_mscHandler	-> getLanguage ();
-	   type		= the_mscHandler	-> getType ();
-	   programName		-> setText (a);
-	   nameofLanguage	-> setText (get_programm_language_string (language));
-	   programType	-> setText (get_programm_type_string (type));
-	   showLabel (" ");
-	}
-	else {
-	   programName		-> setText (" ");
-	   nameofLanguage	-> setText (" ");
-	   programType		-> setText (" ");
-	   switch (coding) {
-	      default:
-	         showLabel (QString ("unimplemented Data"));
-	         break;
-	      case 5:
-	         showLabel (QString ("Transparent Channel not implemented"));
-	         break;
-	      case 60:
-	         showLabel (QString ("MOT partially implemented"));
-	         break;
-	      case 59:
-	         showLabel (QString ("Embedded IP: UDP data sent to 8888"));
-	         break;
-	   }
+	switch (my_ficHandler -> kindofService (a)) {
+	   case AUDIO_SERVICE:
+	      { audiodata d;
+	        my_ficHandler	-> dataforAudioService (a, &d);
+	        my_mscHandler	-> set_audioChannel (&d);
+	        showLabel (QString (" "));
+	        language	= my_mscHandler	-> getLanguage ();
+	        type		= my_mscHandler	-> getType ();
+	        programName	-> setText (a);
+	        nameofLanguage	-> setText (get_programm_language_string (language));
+	        programType	-> setText (get_programm_type_string (type));
+	        channelData (d. subchId, 
+	                     d. uepFlag,
+	                     d. startAddr,
+	                     d. length,
+	                     d. protLevel,
+	                     d. bitRate,
+	                     d. ASCTy);
+	        break;
+	      }
+	   case PACKET_SERVICE:
+	      {  packetdata d;
+	          my_ficHandler	-> dataforDataService (a, &d);
+	         if ((d.  DSCTy == 0) || (d. bitRate == 0))
+	            return;
+	         my_mscHandler	-> set_dataChannel (&d);
+	         programName	-> setText (" ");
+	         nameofLanguage	-> setText (" ");
+	         programType		-> setText (" ");
+	         switch (d. DSCTy) {
+	            default:
+	               showLabel (QString ("unimplemented Data"));
+	               break;
+	            case 5:
+	               showLabel (QString ("Transp. Channel not implemented"));
+	               break;
+	            case 60:
+	               showLabel (QString ("MOT partially implemented"));
+	               break;
+	            case 59:
+	               showLabel (QString ("Embedded IP: UDP data to 8888"));
+	               break;
+	            case 44:
+	               showLabel (QString ("Journaline"));
+	               break;
+	         }
+	         channelData (d. subchId, 
+	                      d. uepFlag,
+	                      d. startAddr,
+	                      d. length,
+	                      d. protLevel,
+	                      d. bitRate,
+	                      d. DSCTy);
+	        break;
+	      }
 	}
 }
 
@@ -779,7 +801,7 @@ SF_INFO *sf_info	= (SF_INFO *)alloca (sizeof (SF_INFO));
 void	RadioInterface::set_mp2File (void) {
 
 	if (mp2File != NULL) {
-	   the_mscHandler	-> setFiles (NULL, mp4File);
+	   my_mscHandler	-> setFiles (NULL, mp4File);
 	   fclose (mp2File);
 	   mp2File	= NULL;
 	   mp2fileButton	-> setText ("MP2");
@@ -804,14 +826,14 @@ void	RadioInterface::set_mp2File (void) {
 	   qDebug () << "cannot open " << file. toLatin1 (). data ();
 	   return;
 	}
-	the_mscHandler	-> setFiles (mp2File, mp4File);
+	my_mscHandler	-> setFiles (mp2File, mp4File);
 	mp2fileButton	-> setText ("writing");
 }
 
 void	RadioInterface::set_mp4File (void) {
 
 	if (mp4File != NULL) {
-	   the_mscHandler	-> setFiles (mp2File, NULL);
+	   my_mscHandler	-> setFiles (mp2File, NULL);
 	   fclose (mp4File);
 	   mp4File	= NULL;
 	   aacfileButton	-> setText ("MP4");
@@ -837,7 +859,7 @@ void	RadioInterface::set_mp4File (void) {
 	   return;
 	}
 
-	the_mscHandler	-> setFiles (mp2File, mp4File);
+	my_mscHandler	-> setFiles (mp2File, mp4File);
 	aacfileButton	-> setText ("writing");
 }
 
@@ -1084,8 +1106,8 @@ QString	file;
 	the_ofdmProcessor	= new ofdmProcessor (myRig,
 	                                             &dabModeParameters,
 	                                             this,
-	                                             the_mscHandler,
-	                                             the_ficHandler,
+	                                             my_mscHandler,
+	                                             my_ficHandler,
 	                                             threshold,
 #ifdef	HAVE_SPECTRUM
 	                                             spectrumBuffer,
@@ -1193,7 +1215,7 @@ void	RadioInterface::autoCorrector_on (void) {
 	Services		= QStringList ();
 	ensemble. setStringList (Services);
 	ensembleDisplay		-> setModel (&ensemble);
-	the_ficHandler		-> clearEnsemble ();
+	my_ficHandler		-> clearEnsemble ();
 	the_ofdmProcessor	-> coarseCorrectorOn ();
 	the_ofdmProcessor	-> reset ();
 //
@@ -1239,14 +1261,18 @@ uint8_t	Mode	= s. toInt ();
 //	settings of the parameters.
 	delete 	the_ofdmProcessor;
 	setModeParameters (Mode);
-	the_ficHandler		-> setBitsperBlock	(2 * dabModeParameters. K);
-	the_mscHandler		-> setMode		(&dabModeParameters);
+	my_ficHandler		-> setBitsperBlock	(2 * dabModeParameters. K);
+	delete	my_mscHandler;
+	my_mscHandler		= new mscHandler	(this,
+	                                                 &dabModeParameters,
+	                                                 our_audioSink,
+	                                                 Concurrent);
 	delete the_ofdmProcessor;
 	the_ofdmProcessor	= new ofdmProcessor (myRig,
 	                                             &dabModeParameters,
 	                                             this,
-	                                             the_mscHandler,
-	                                             the_ficHandler,
+	                                             my_mscHandler,
+	                                             my_ficHandler,
 	                                             threshold,
 #ifdef	HAVE_SPECTRUM
 	                                             spectrumBuffer,

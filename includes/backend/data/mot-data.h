@@ -79,6 +79,11 @@ Q_OBJECT
 public:
 		motHandler	(RadioInterface *);
 		~motHandler	(void);
+void		process_mscGroup	(uint8_t *,
+	                                 uint8_t,
+	                                 bool,
+	                                 int16_t,
+	                                 uint16_t);
 void		processHeader (int16_t	transportId,
 	                       uint8_t	*segment,
 	                       int16_t	segmentSize,
@@ -115,13 +120,13 @@ private:
 	                         int16_t	size,
 	                         int16_t	contentType,
 	                         int16_t	contentsubType,
-	                         char		*name);
+	                         QString	name);
 	void	newEntry	(int16_t	index,
 	                         uint16_t	transportId,
 	                         int16_t	size,
 	                         int16_t	contentType,
 	                         int16_t	contentsubType,
-	                         char		*name);
+	                         QString	name);
 	bool	isComplete	(motElement *);
 	void	handleComplete	(motElement *);
 	void	checkDir	(QString &);

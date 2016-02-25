@@ -46,8 +46,6 @@ private:
 	void	addSegment		(uint16_t, QString);
 	void	add_MSC_element		(uint8_t *, int16_t);
 	void	build_MSC_segment	(uint8_t *, int16_t);
-	void	process_MSC_segment	(uint8_t *, uint8_t,
-	                                 int16_t, bool, int16_t);
 	bool	pad_crc			(uint8_t *, int16_t);
 	QString	dynamicLabelText;
 	int16_t	charSet;

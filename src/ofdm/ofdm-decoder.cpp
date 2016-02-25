@@ -87,7 +87,9 @@ float	Min	= 1000;
 	   return 0;
 //	as a side effect we "compute" an estimate for the
 //	coarse offset
-	
+#ifdef	SIMPLE_SYNCHRONIZATION
+	return getMiddle (fft_buffer);
+#endif
 	for (i = T_u  - SEARCH_RANGE; i < T_u + SEARCH_RANGE; i ++) {
 	   if (abs (fft_buffer [i % T_u]) < Min) {
               float a1  = arg (fft_buffer [(i + 1) % T_u] *
@@ -200,3 +202,30 @@ int16_t	high	= low + carriers;
 	return get_db (signal / (carriers / 2)) - get_db (noise);
 }
 
+
+int16_t	ofdmDecoder::getMiddle (DSPCOMPLEX *v) {
+int16_t		i;
+DSPFLOAT	sum = 0;
+int16_t		maxIndex = 0;
+DSPFLOAT	oldMax	= 0;
+//
+//	basic sum over K carriers that are - most likely -
+//	in the range
+//	The range in which the carrier should be is
+//	T_u / 2 - K / 2 .. T_u / 2 + K / 2
+//	We first determine an initial sum over 1536 carriers
+	for (i = 40; i < 1536 + 40; i ++)
+	   sum += abs (v [(T_u / 2 + i) % T_u]);
+//
+//	Now a moving sum, look for a maximum within a reasonable
+//	range (around (T_u - K) / 2, the start of the useful frequencies)
+	for (i = 40; i < T_u - (1536 - 40); i ++) {
+	   sum -= abs (v [(T_u / 2 + i) % T_u]);
+	   sum += abs (v [(T_u / 2 + i + 1536) % T_u]);
+	   if (sum > oldMax) {
+	      sum = oldMax;
+	      maxIndex = i;
+	   }
+	}
+	return maxIndex - (T_u - 1536) / 2;
+}

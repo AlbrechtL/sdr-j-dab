@@ -43,86 +43,22 @@
 //	Note CIF counts from 0 .. 3
 //
 		mscHandler::mscHandler	(RadioInterface *mr,
+	                                 DabParams	*p,
 	                                 audioSink	*sink,
 	                                 uint8_t	concurrent) {
-		myRadioInterface	= mr;
-	        concurrencyOn 		= concurrent != 0;
-	        cifVector		= new int16_t [55296];
-	        cifCount		= 0;	// msc blocks in CIF
-	        blkCount		= 0;
-	        dabHandler		= new dabVirtual;
-	        newChannel		= false;
-	        currentChannel		= -1;
-	        dabModus		= 0;
-	        our_audioSink		= sink;
-	        mp2File			= NULL;	
-	        mp4File			= NULL;
-//	assume default Mode I
-		BitsperBlock		= 2 * 1536;
-	   	numberofblocksperCIF	= 18;
-	        audioService		= true;
-}
-
-		mscHandler::~mscHandler	(void) {
-	delete[]  cifVector;
-	delete	dabHandler;
-}
-
-void	mscHandler::stop	(void) {
-	currentChannel	= -1;
-	dabHandler	-> stop ();
-}
-
-void	mscHandler::set_audioChannel (int16_t	subchId,
-	                              int16_t	uepFlag,
-	                              int16_t	startAddr,
-	                              int16_t	Length,
-	                              int16_t	protLevel,
-	                              int16_t	bitRate,
-	                              int16_t	ASCTy,
-	                              int16_t	language,
-	                              int16_t	type) {
-	audioService	= true;
-	newChannel	= true;
-	currentChannel	= subchId;
-	new_uepFlag	= uepFlag;
-	new_startAddr	= startAddr;
-	new_Length	= Length;
-	new_protLevel	= protLevel;
-	new_bitRate	= bitRate;
-	new_language	= language;
-	new_type	= type;
-	new_ASCTy	= ASCTy;
-	new_dabModus	= ASCTy == 077 ? DAB_PLUS : DAB;
-//	fprintf (stderr, "Preparations for channel select\n");
-}
-//
-void	mscHandler::set_dataChannel (int16_t	subchId,
-	                             int16_t	uepFlag,
-	                             int16_t	startAddr,
-	                             int16_t	Length,
-	                             int16_t	protLevel,
-	                             int16_t	bitRate,
-	                             int16_t	FEC_scheme,
-	                             uint8_t	DGflag,
-	                             uint8_t	DSCTy,
-	                             int16_t	packetAddress) {
-	audioService	= false;
-	newChannel	= true;
-	currentChannel	= subchId;
-	new_uepFlag	= uepFlag;
-	new_startAddr	= startAddr;
-	new_Length	= Length;
-	new_protLevel	= protLevel;
-	new_DGflag	= DGflag;
-	new_bitRate	= bitRate;
-	new_FEC_scheme	= FEC_scheme;
-	new_DSCTy	= DSCTy;
-	new_packetAddress = packetAddress;
-}
-//
-void	mscHandler::setMode	(DabParams *p) {
-	BitsperBlock	= 2 * p -> K;
+	myRadioInterface	= mr;
+	our_audioSink		= sink;
+	concurrencyOn 		= concurrent != 0;
+	cifVector		= new int16_t [55296];
+	cifCount		= 0;	// msc blocks in CIF
+	blkCount		= 0;
+	dabHandler		= new dabVirtual;
+	newChannel		= false;
+	work_to_be_done		= false;
+	dabModus		= 0;
+	mp2File			= NULL;	
+	mp4File			= NULL;
+	BitsperBlock		= 2 * p -> K;
 	if (p -> dabMode == 4)	// 2 CIFS per 76 blocks
 	   numberofblocksperCIF	= 36;
 	else
@@ -133,6 +69,55 @@ void	mscHandler::setMode	(DabParams *p) {
 	   numberofblocksperCIF	= 72;
 	else			// shouldnot/cannot happen
 	   numberofblocksperCIF	= 18;
+
+	audioService		= true;		// default
+}
+
+		mscHandler::~mscHandler	(void) {
+	delete[]  cifVector;
+	delete	dabHandler;
+}
+
+void	mscHandler::stop	(void) {
+	work_to_be_done	= false;
+	dabHandler	-> stop ();
+}
+
+//	Note, the set_xxx functions are called from within a
+//	different thread than the process_mscBlock method,
+//	so, a little bit of locking seems wise while
+//	the actual changing of the settings is done in the
+//	thread executing process_mscBlock
+void	mscHandler::set_audioChannel (audiodata *d) {
+	locker. lock ();
+	audioService	= true;
+	new_uepFlag	= d	-> uepFlag;
+	new_startAddr	= d	-> startAddr;
+	new_Length	= d	-> length;
+	new_protLevel	= d	-> protLevel;
+	new_bitRate	= d	-> bitRate;
+	new_language	= d	-> language;
+	new_type	= d	-> programType;
+	new_ASCTy	= d	-> ASCTy;
+	new_dabModus	= new_ASCTy == 077 ? DAB_PLUS : DAB;
+	newChannel	= true;
+	locker. unlock ();
+}
+//
+void	mscHandler::set_dataChannel (packetdata	*d) {
+	locker. lock ();
+	audioService	= false;
+	new_uepFlag	= d	-> uepFlag;
+	new_startAddr	= d	-> startAddr;
+	new_Length	= d	-> length;
+	new_protLevel	= d	-> protLevel;
+	new_DGflag	= d	-> DGflag;
+	new_bitRate	= d	-> bitRate;
+	new_FEC_scheme	= d	-> FEC_scheme;
+	new_DSCTy	= d	-> DSCTy;
+	new_packetAddress = d	-> packetAddress;
+	newChannel	= true;
+	locker. unlock ();
 }
 
 //
@@ -142,14 +127,14 @@ void	mscHandler::process_mscBlock	(int16_t *fbits,
 int16_t	currentblk;
 int16_t	*myBegin;
 
-	if (currentChannel == -1)
+	if (!work_to_be_done && !newChannel)
 	   return;
 
 	currentblk	= (blkno - 5) % numberofblocksperCIF;
 //
 //	we only change channel at the start of a new frame!!!
 	if (newChannel) {
-//	if ((blkno - 5 == 0) && newChannel) {
+	   locker. lock ();
 	   newChannel	= false;
 	   dabHandler -> stopRunning ();
 	   delete dabHandler;
@@ -183,8 +168,8 @@ int16_t	*myBegin;
 	          
 	   startAddr	= new_startAddr;
 	   Length	= new_Length;
-	   protLevel	= new_protLevel;
-	   bitRate	= new_bitRate;
+	   work_to_be_done	= true;
+	   locker. unlock ();
 	}
 //
 //	and the normal operation is:
@@ -207,21 +192,6 @@ int16_t	*myBegin;
 }
 //
 //
-void	mscHandler::getMode	(bool *audio, uint8_t *SCTy) {
-	if (audioService) {
-	   *audio	= true;
-	   *SCTy	= new_ASCTy;
-	}
-	else {
-	   *audio	= false;
-	   *SCTy	= new_DSCTy;
-	}
-}
-
-int16_t	mscHandler::getChannel	(void) {
-	return currentChannel;
-}
-
 int16_t	mscHandler::getLanguage (void) {
 	return new_language;
 }
@@ -231,7 +201,7 @@ int16_t	mscHandler::getType (void) {
 }
 
 void	mscHandler::stopProcessing (void) {
-	currentChannel = -1;
+	work_to_be_done	= false;
 }
 
 void	mscHandler::setFiles (FILE *f1, FILE *f2) {

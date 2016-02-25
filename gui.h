@@ -29,17 +29,9 @@
 
 #include	"dab-constants.h"
 #include	<QDialog>
+#include	<QHostAddress>
 #include	<QUdpSocket>
 #include	"ui_sdrgui.h"
-//#include	<qwt.h>
-//#include	<qwt_slider.h>
-//#include	<qwt_plot.h>
-//#include	<qwt_plot_curve.h>
-//#include	<qwt_plot_marker.h>
-//#include	<qwt_plot_grid.h>
-//#include	<qwt_dial.h>
-//#include	<qwt_dial_needle.h>
-//#include	<qwt_plot_spectrogram.h>
 #include	<QTimer>
 #include	<sndfile.h>
 #include	<QWheelEvent>
@@ -129,8 +121,8 @@ private:
 	int32_t		sampleCount;
 	bool		spectrumWaterfall;
 	ofdmProcessor	*the_ofdmProcessor;
-	ficHandler	*the_ficHandler;
-	mscHandler	*the_mscHandler;
+	ficHandler	*my_ficHandler;
+	mscHandler	*my_mscHandler;
 	audioSink	*our_audioSink;
 	int32_t		FreqIncrement;
 	int32_t		TunedFrequency;

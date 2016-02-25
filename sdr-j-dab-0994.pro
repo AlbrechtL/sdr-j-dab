@@ -5,7 +5,7 @@
 ######################################################################
 
 TEMPLATE	= app
-TARGET		= sdr-j-dab-0.993
+TARGET		= sdr-j-dab-0.994
 QT		+= widgets network
 CONFIG		+= console
 QMAKE_CFLAGS	+= -flto  -ffast-math
@@ -15,12 +15,15 @@ QMAKE_LFLAGS	+= -flto
 #QMAKE_CXXFLAGS	+= -ffast-math -g
 #QMAKE_LFLAGS	+= -g
 #CONFIG		+= NO_SSE_SUPPORT 
-DEFINES	+= SHOW_COARSE_OFFSET_PROGRESS
+DEFINES		+= SHOW_COARSE_OFFSET_PROGRESS
+#DEFINES	+= SIMPLE_SYNCHRONIZATION
 DEPENDPATH += . \
 	      ./src \
 	      ./includes \
 	      ./src/ofdm \
 	      ./src/backend \
+	      ./src/backend/audio \
+	      ./src/backend/data \
 	      ./src/scopes-qwt6 \
 	      ./src/output \
 	      ./src/various \
@@ -29,6 +32,8 @@ DEPENDPATH += . \
 	      ./src/input/wavfiles \
 	      ./includes/ofdm \
 	      ./includes/backend \
+	      ./includes/backend/audio \
+	      ./includes/backend/data \
 	      ./includes/scopes-qwt6 \
 	      ./includes/output \
 	      ./includes/various 
@@ -39,6 +44,8 @@ INCLUDEPATH += . \
 	      ./includes \
 	      ./includes/ofdm \
 	      ./includes/backend \
+	      ./includes/backend/audio \
+	      ./includes/backend/data \
 	      ./includes/scopes-qwt6 \
 	      ./includes/output \
 	      ./includes/various \
@@ -55,27 +62,28 @@ HEADERS += ./gui.h \
 	   ./includes/ofdm/phasetable.h \
 	   ./includes/ofdm/mapper.h \
 	   ./includes/backend/viterbi.h \
-#	   ./includes/backend/viterbi-2.h \
-#	   ./backend/mm_alloc.h \
 	   ./includes/backend/fic-handler.h \
 	   ./includes/backend/msc-handler.h \
 	   ./includes/backend/fib-processor.h  \
-	   ./includes/backend/rscodec.h \
-	   ./includes/backend/mp2processor.h \
+	   ./includes/backend/audio/rscodec.h \
+	   ./includes/backend/audio/mp4processor.h \
+	   ./includes/backend/audio/mp2processor.h \
 	   ./includes/backend/charsets.h \
-	   ./includes/backend/mp4processor.h \
 	   ./includes/backend/deconvolve.h \
 	   ./includes/backend/firecode-checker.h \
 	   ./includes/backend/dab-serial.h \
 	   ./includes/backend/dab-concurrent.h \
 //	   ./includes/backend/dab-processor.h \
 	   ./includes/backend/dab-virtual.h \
-	   ./includes/backend/pad-handler.h \
-	   ./includes/backend/mot-data.h \
-	   ./includes/backend/msc-datagroup.h \
+	   ./includes/backend/data/ip-datahandler.h \
+	   ./includes/backend/data/journaline-datahandler.h \
+	   ./includes/backend/data/mot-databuilder.h \
+	   ./includes/backend/data/virtual-datahandler.h \
+	   ./includes/backend/data/pad-handler.h \
+	   ./includes/backend/data/mot-data.h \
+	   ./includes/backend/data/msc-datagroup.h \
 	   ./includes/output/audiosink.h \
 	   ./includes/output/fir-filters.h \
-#	   ./includes/scopes-qwt6/scope.h \
 	   ./includes/scopes-qwt6/spectrogramdata.h \
 	   ./includes/scopes-qwt6/iqdisplay.h \
            ./includes/various/fft.h \
@@ -96,26 +104,28 @@ SOURCES += ./main.cpp \
 	   ./src/ofdm/phasetable.cpp \
 	   ./src/ofdm/mapper.cpp \
 	   ./src/backend/viterbi.cpp \
-#	   ./src/backend/viterbi-2.cpp \
 	   ./src/backend/fic-handler.cpp \
 	   ./src/backend/msc-handler.cpp \
 	   ./src/backend/deconvolve.cpp \
 	   ./src/backend/fib-processor.cpp  \
-	   ./src/backend/rscodec.cpp \
-	   ./src/backend/mp2processor.cpp \
+	   ./src/backend/audio/rscodec.cpp \
+	   ./src/backend/audio/mp4processor.cpp \
+	   ./src/backend/audio/mp2processor.cpp \
 	   ./src/backend/charsets.cpp \
-	   ./src/backend/mp4processor.cpp \
 	   ./src/backend/firecode-checker.cpp \
 	   ./src/backend/dab-virtual.cpp \
 	   ./src/backend/dab-serial.cpp \
 	   ./src/backend/dab-concurrent.cpp \
-	   ./src/backend/pad-handler.cpp \
-	   ./src/backend/mot-data.cpp \
-	   ./src/backend/msc-datagroup.cpp \
+	   ./src/backend/data/ip-datahandler.cpp \
+	   ./src/backend/data/journaline-datahandler.cpp \
+	   ./src/backend/data/mot-databuilder.cpp \
+	   ./src/backend/data/virtual-datahandler.cpp \
+	   ./src/backend/data/pad-handler.cpp \
+	   ./src/backend/data/mot-data.cpp \
+	   ./src/backend/data/msc-datagroup.cpp \
 	   ./src/backend/dab-processor.cpp \
 	   ./src/backend/protTables.cpp \
 	   ./src/output/fir-filters.cpp \
-#	   ./src/scopes-qwt6/scope.cpp \
 	   ./src/scopes-qwt6/iqdisplay.cpp \
 	   ./src/output/audiosink.cpp \
            ./src/various/fft.cpp \
@@ -136,7 +146,7 @@ CONFIG		+= airspy
 #CONFIG		+= airspy-exp
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__ 	# use at your own risk
-#DEFINES		+= MSC_DATA__		# use at your own risk
+DEFINES		+= MSC_DATA__		# use at your own risk
 DESTDIR		= ./linux-bin
 INCLUDEPATH	+= /usr/include/qwt /usr/local/include
 #LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu

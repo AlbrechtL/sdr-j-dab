@@ -1,9 +1,8 @@
 #
 /*
- *
- *    Copyright (C) 2013
+ *    Copyright (C) 2015
  *    Jan van Katwijk (J.vanKatwijk@gmail.com)
- *    Lazy Chair Programming
+ *    Lazy Chair Computing
  *
  *    This file is part of the SDR-J (JSDR).
  *    SDR-J is free software; you can redistribute it and/or modify
@@ -21,42 +20,22 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#
-/*
- *    viterbi.h  --  Viterbi decoder
- *
- */
-#ifndef _VITERBI_DECODER_H
-#define _VITERBI_DECODER_H
-#include	<stdio.h>
-#include	<string.h>
-#include	<limits.h>
-#include	<stdint.h>
+#ifndef	MOT_DATABUILDER
+#define	MOT_DATABUILDER
+#include	"dab-constants.h"
+#include	"virtual-datahandler.h"
+#include	<QByteArray>
 
-//
-//	experimental setting for 1/4 7 decoder
-class viterbi_2 {
+class	RadioInterface;
+class	motHandler;
+
+class	mot_databuilder:public virtual_dataHandler {
 public:
-		viterbi_2			(int16_t);
-		~viterbi_2 		(void);
-
-	void	deconvolve		(int16_t *, uint8_t *);
+	mot_databuilder		(RadioInterface *);
+	~mot_databuilder	(void);
+void	add_mscDatagroup	(QByteArray &);
 private:
-	int16_t	costsFor		(uint16_t, int16_t *);
-//	int16_t	costsFor		(uint16_t, uint8_t, int16_t *);
-	uint8_t	bitFor			(uint16_t, uint16_t, uint8_t);
-	int16_t	Poly1;
-	int16_t	Poly2;
-	int16_t	Poly3;
-	int16_t	Poly4;
-	int32_t	**transCosts;
-	int16_t	**history;
-	int16_t	*sequence;
-	uint8_t	*poly1_table;
-	uint8_t	*poly2_table;
-	uint8_t	*poly3_table;
-	uint8_t	*poly4_table;
-	uint8_t	*table5;
-	int16_t	blockLength;
+motHandler	*my_motHandler;
 };
 #endif
+

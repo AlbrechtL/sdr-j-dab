@@ -48,6 +48,7 @@ public:
 	int16_t	getStrength		(void);
 	void	set_displayToken	(int16_t);
 private:
+	int16_t	getMiddle		(DSPCOMPLEX *);
 	DabParams	*params;
 	RingBuffer<DSPCOMPLEX> *iqBuffer;
 	DSPCOMPLEX	*refTable;
