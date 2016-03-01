@@ -64,6 +64,18 @@ float	sum		= 0;
 	memcpy (fft_buffer, v, amount * sizeof (DSPCOMPLEX));
 	memset (&fft_buffer [amount], 0, (Tu - amount) * sizeof (DSPCOMPLEX));
 
+    setlocale(LC_NUMERIC, "en_US.UTF-8");
+    FILE * pFile;
+    pFile = fopen ("data_prs.m","w");
+
+    fprintf(pFile,"fft_buffer=[");
+    for(int i=0;i<Tu;i++)
+    {
+        fprintf(pFile, "%f+%fi ...\n", fft_buffer[i].real(),fft_buffer[i].imag());
+        //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+    }
+    fprintf(pFile,"];");
+
 	fft_processor -> do_FFT ();
 
 //	back into the frequency domain, now correlate
@@ -71,6 +83,25 @@ float	sum		= 0;
 	   res_buffer [i] = fft_buffer [i] * conj (refTable [i]);
 //	and, again, back into the time domain
 	res_processor	-> do_IFFT ();
+
+
+    fprintf(pFile,"res_buffer=[");
+    for(int i=0;i<Tu;i++)
+    {
+        fprintf(pFile, "%f+%fi ...\n", res_buffer[i].real(),res_buffer[i].imag());
+        //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+    }
+    fprintf(pFile,"];");
+
+    fprintf(pFile,"refTable=[");
+    for(int i=0;i<Tu;i++)
+    {
+        fprintf(pFile, "%f+%fi ...\n", refTable[i].real(),refTable[i].imag());
+        //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+    }
+    fprintf(pFile,"];");
+
+    fclose(pFile);
 //
 	for (i = 0; i < Tu; i ++)
 	   sum	+= abs (res_buffer [i]);

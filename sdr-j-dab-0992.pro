@@ -138,7 +138,8 @@ SOURCES += ./main.cpp \
     NewGUI/Util.cpp \
     NewGUI/qwtlevelmeter.cpp \
     NewGUI/qwtsmeter.cpp \
-    NewGUI/serviceselector.cpp
+    NewGUI/serviceselector.cpp \
+    src/ofdm/sdr_prstab.cpp
 #
 #	for unix systems this is about it. Adapt when needed for naming
 #	and locating libraries. If you do not need a device as

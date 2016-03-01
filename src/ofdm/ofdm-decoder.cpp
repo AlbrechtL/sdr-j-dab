@@ -30,6 +30,8 @@
 
 #define	SYNC_LENGTH	15
 
+extern fftwf_complex prs_static[1536];
+
 	ofdmDecoder::ofdmDecoder	(DabParams	*p,
 	                                 RingBuffer<DSPCOMPLEX> *iqBuffer,
 	                                 DSPCOMPLEX	*refTable,
@@ -51,6 +53,7 @@
 	fft_handler		= new common_fft (T_u);
 	fft_buffer		= fft_handler -> getVector ();
 	phaseReference		= new DSPCOMPLEX [T_u];
+    syncBuffer2		= new DSPCOMPLEX [T_u];
 	myMapper		= new permVector (params);
 	iqCount			= 0;
 	coarseOffset		= 0;
@@ -67,6 +70,7 @@
 	delete	phaseReference;
 	delete	myMapper;
 	delete []	syncBuffer;
+    delete	syncBuffer2;
 }
 //	in practive, we use the "incoming" block
 //	and use its data to generate the prs
@@ -85,6 +89,7 @@ int16_t	i;
 	memcpy (phaseReference, fft_buffer, T_u * sizeof (DSPCOMPLEX));
 	for (i = 0; i < T_u; i ++)
 	   syncBuffer [i] = abs (fft_buffer [i]);
+    memcpy (syncBuffer2, fft_buffer, T_u * sizeof (DSPCOMPLEX));
 }
 
 //	for the other blocks of data, the first step is to go from
@@ -123,19 +128,20 @@ static		int cnt	= 0;
 //	Note that we do it in two steps since the
 //	fftbuffer contains low and high at the ends
 	if (blkno == displayToken) {
-	   if (++cnt > 7) {
+       if (++cnt > 1) {
 	      iqBuffer	-> putDataIntoBuffer (&fft_buffer [0],
 	                                      carriers / 2);
 	      iqBuffer	-> putDataIntoBuffer (&fft_buffer [T_u - 1 - carriers / 2],
 	                                      carriers / 2);
-	      showIQ	(carriers);
+          showIQ	(carriers);
 	      cnt = 0;
 	   }
 	}
 }
 
 int16_t	ofdmDecoder::coarseCorrector (void) {
-	coarseOffset 	= getMiddle	(syncBuffer);
+    //coarseOffset 	= getMiddle	(syncBuffer);
+    coarseOffset 	= getMiddle2();
 	return coarseOffset;
 }
 
@@ -180,8 +186,184 @@ int16_t		base1	= 0;
 	      maxIndex = i;
 	   }
 	}
-	return  (base1 + maxIndex - (T_u - carriers) / 2) / 2;
+
+       int original = (base1 + maxIndex - (T_u - carriers) / 2) / 2;
+       return original;
 }
+
+int16_t	ofdmDecoder::getMiddle2 (void)
+{
+    float ideal_dab_spectrum[T_u * 2-1];
+       memset(ideal_dab_spectrum,0,sizeof(ideal_dab_spectrum));
+       for(int i=0;i<carriers;i++)
+       {
+           ideal_dab_spectrum[(T_u - carriers)/2 + i] = 1;
+           //ideal_dab_spectrum[(T_u - carriers)/2 + i] = prs_static[i];
+       }
+
+       float crosscorrelation[T_u * 2-1];
+       memset(crosscorrelation,0,sizeof(crosscorrelation));
+
+       // Start of frequency domain cross correlation
+       fftwf_complex *in_v, *out_v, *in_spec, *out_spec, *in_kkf, *out_kkf;
+       fftwf_plan p_v, p_spec, p_kkf;
+
+       in_v = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * T_u*2-1);
+       out_v = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * T_u*2-1);
+       in_spec = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * T_u*2-1);
+       out_spec = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * T_u*2-1);
+       in_kkf = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * T_u*2-1);
+       out_kkf = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * T_u*2-1);
+
+       p_v = fftwf_plan_dft_1d(T_u*2-1, in_v, out_v, FFTW_FORWARD, FFTW_ESTIMATE);
+       p_spec = fftwf_plan_dft_1d(T_u*2-1, in_spec,out_spec, FFTW_FORWARD, FFTW_ESTIMATE);
+       p_kkf = fftwf_plan_dft_1d(T_u*2-1, in_kkf, out_kkf, FFTW_BACKWARD, FFTW_ESTIMATE);
+
+       // Input
+       memset(in_v, 0, sizeof(fftwf_complex) * T_u*2-1);
+       for(int i=0;i<T_u;i++)
+           //in_v[i][0] = v[(i + T_u/2) % T_u];
+       {
+           // Copy and recorder
+           /*in_v[i][0] = syncBuffer2[(i + T_u/2) % T_u].real();
+           in_v[i][1] = syncBuffer2[(i + T_u/2) % T_u].imag();*/
+           in_v[i][0] = abs(syncBuffer2[(i + T_u/2) % T_u]);
+       }
+
+       memset(in_spec, 0, sizeof(fftwf_complex) * T_u*2-1);
+       for(int i=0;i<T_u*2-1;i++)
+           in_spec[i][0] = ideal_dab_spectrum[(T_u*2-1)-i-1];
+       /*for(int i=0;i<carriers;i++)
+       {
+           in_spec[(T_u-carriers)/2 + i][0] = prs_static[i][0];
+           in_spec[(T_u-carriers)/2 + i][1] = prs_static[i][1];
+       }*/
+
+       // Transform to frequency domain
+       fftwf_execute(p_v);
+       fftwf_execute(p_spec);
+
+       // Do the cross correlation
+       for(int i=0;i<T_u*2-1;i++)
+       {
+           // Complex multiplication
+           in_kkf[i][0] = (out_v[i][0] * out_spec[i][0]) - (-out_v[i][1] * -out_spec[i][1]);
+           in_kkf[i][1] = (-out_v[i][1] * out_spec[i][0]) + (out_v[i][0] * -out_spec[i][1]);
+
+           //in_kkf[i] = out_v[i] * conj(out_spec[i]);
+       }
+
+       // Transform to time domain
+       fftwf_execute(p_kkf);
+
+       // Reorder data because the 0-frequency is middle after the FFT
+       for (int i = 0; i < 2 * T_u - 1; i++)
+       {
+           // Reorder
+           float real = out_kkf[(i + T_u) % (2 * T_u - 1)][0];
+           float imag = out_kkf[(i + T_u) % (2 * T_u - 1)][1];
+
+            // Make value absolute
+           crosscorrelation[i] = sqrt(real*real + imag*imag);
+       }
+
+       // Looking for maximum
+       float old_value = 0;
+       int index = 0;
+       for(int i=0;i<T_u * 2;i++)
+       {
+           if(crosscorrelation[i] >= old_value)
+           {
+               old_value = crosscorrelation[i];
+               index = i;
+           }
+       }
+       int tau = index - T_u;
+
+       setlocale(LC_NUMERIC, "en_US.UTF-8");
+       /*FILE * pFile;
+       pFile = fopen ("data_kkf.m","w");
+       if (pFile!=NULL)
+       {
+           fprintf(pFile,"syncBuffer2=[");
+           for(int i=0;i<T_u;i++)
+           {
+               fprintf(pFile, "%f+%fi ...\n", syncBuffer2[i].real(),syncBuffer2[i].imag());
+               //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+           }
+           fprintf(pFile,"];");
+
+           fprintf(pFile,"out_kkf=[");
+           for(int i=0;i<T_u * 2-1;i++)
+           {
+               fprintf(pFile, "%f+%fi ...\n", out_kkf[i][0],out_kkf[i][1]);
+               //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+           }
+           fprintf(pFile,"];");
+
+           fprintf(pFile,"out_v=[");
+           for(int i=0;i<T_u * 2-1;i++)
+           {
+               fprintf(pFile, "%f+%fi ...\n", out_v[i][0],out_v[i][1]);
+               //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+           }
+           fprintf(pFile,"];");
+
+           fprintf(pFile,"in_v=[");
+           for(int i=0;i<T_u * 2-1;i++)
+           {
+               fprintf(pFile, "%f+%fi ...\n", in_v[i][0],in_v[i][1]);
+           }
+           fprintf(pFile,"];");
+
+           fprintf(pFile,"in_spec=[");
+           for(int i=0;i<T_u * 2-1;i++)
+           {
+               fprintf(pFile, "%f+%fi ...\n", in_spec[i][0],in_spec[i][1]);
+           }
+           fprintf(pFile,"];");
+
+           fprintf(pFile,"crosscorrelation=[");
+           for(int i=0;i<T_u * 2-1;i++)
+           {
+               fprintf(pFile, "%f ...\n", crosscorrelation[i]);
+           }
+           fprintf(pFile,"];");
+
+           fprintf(pFile,"prs_static=[");
+           for(int i=0;i<1536;i++)
+           {
+               fprintf(pFile, "%f+%fi ...\n", prs_static[i][0],prs_static[i][1]);
+               //fprintf(pFile, "%i ...\n", ideal_dab_spectrum[i]);
+           }
+           fprintf(pFile,"];");
+
+           fclose(pFile);
+       }*/
+
+       fftwf_destroy_plan(p_kkf);
+       fftwf_free(in_kkf);
+       fftwf_free(out_kkf);
+
+       fftwf_destroy_plan(p_v);
+       fftwf_free(in_v);
+       fftwf_free(out_v);
+
+       fftwf_destroy_plan(p_spec);
+       fftwf_free(in_spec);
+       fftwf_free(out_spec);
+
+       //int original = (base1 + maxIndex - (T_u - carriers) / 2) / 2;
+       //return diff;
+       //fprintf(stderr,"diff %i test %i\n", diff,test);
+       //return test;
+
+       tau = -tau;
+       //fprintf(stderr,"old_value = %f, tau = %i\n",old_value, tau);
+       return tau;
+       //return original;
+}
+
 //
 //
 //	for the snr we have a full T_u wide vector, with in the middle

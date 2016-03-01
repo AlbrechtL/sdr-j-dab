@@ -184,6 +184,7 @@ public slots:
 	void	showLabel		(QString);
 	void	showMOT			(QByteArray, int);
     void	TestUIButtonClicked	(void);
+    void    FineOffsetSliderSlot(int value);
 #ifdef	HAVE_SPECTRUM
 	void	showSpectrum		(int);
 	void	set_spectrumHandler	(void);
@@ -191,6 +192,10 @@ private:
 	bool	spectrumisShown;
     bool	NewGUIisShown;
 #endif
+
+signals:
+    void FineOffsetSliderSignal(int);
+    void SyncSetter(bool);
 };
 
 #endif

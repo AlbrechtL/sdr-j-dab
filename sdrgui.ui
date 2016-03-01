@@ -1639,6 +1639,31 @@
     <string>Test UI</string>
    </property>
   </widget>
+  <widget class="QSlider" name="FineOffsetSlider">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>280</y>
+     <width>551</width>
+     <height>29</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>-499</number>
+   </property>
+   <property name="maximum">
+    <number>499</number>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+   <property name="tickPosition">
+    <enum>QSlider::TicksBelow</enum>
+   </property>
+   <property name="tickInterval">
+    <number>100</number>
+   </property>
+  </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <pixmapfunction>qPixmapFromMimeSource</pixmapfunction>

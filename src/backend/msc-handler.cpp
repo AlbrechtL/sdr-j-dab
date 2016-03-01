@@ -137,7 +137,7 @@ void	mscHandler::setMode	(DabParams *p) {
 //
 //	add blocks. First is (should be) block 5, last is (should be) 76
 void	mscHandler::process_mscBlock	(int16_t *fbits,
-	                                 int16_t blkno) { 
+                                     int16_t blkno, bool isSync) {
 int16_t	currentblk;
 int16_t	*myBegin;
 
@@ -203,6 +203,18 @@ int16_t	*myBegin;
 //	separate task or separate function, depending on
 //	the settings in the ini file, we might take advantage of multi cores
 	(void) dabHandler -> process (myBegin, Length * CUSize);
+
+    // Write mscdata into file
+    if(isSync)
+    {
+        fprintf(stderr, "Length: %i, CUSize: %i",Length, CUSize);
+
+        FILE * pFile;
+
+        pFile = fopen ("myfile.bin", "ab");
+        fwrite (myBegin , sizeof(int16_t), sizeof(Length*CUSize), pFile);
+        fclose (pFile);
+    }
 }
 //
 //

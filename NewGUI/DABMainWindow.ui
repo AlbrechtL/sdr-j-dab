@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>484</width>
-    <height>221</height>
+    <width>592</width>
+    <height>368</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -8826,7 +8826,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>484</width>
+     <width>592</width>
      <height>25</height>
     </rect>
    </property>
@@ -9084,8 +9084,6 @@
    <header location="global">MultColorLED.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="res/icons.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

@@ -45,7 +45,7 @@ public:
 	                                 audioSink *,
 	                                 uint8_t);
 		~mscHandler		(void);
-	void	process_mscBlock	(int16_t *, int16_t);
+    void	process_mscBlock	(int16_t *, int16_t, bool isSync);
 	void	setMode			(DabParams *);
 	void	set_audioChannel	(int16_t, int16_t, int16_t,
 	                                 int16_t, int16_t, int16_t, int16_t,

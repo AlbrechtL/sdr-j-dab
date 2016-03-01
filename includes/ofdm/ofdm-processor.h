@@ -102,6 +102,10 @@ private:
 	DSPCOMPLEX	getSample	(int32_t);
 	void		getSamples	(DSPCOMPLEX *, int16_t, int32_t);
 //	void		getSamples	(DSPCOMPLEX *, int16_t);
+    int SliderValue;
+    bool isSync;
+    bool isSyncLast;
+    bool isTimerIsRunning;
 virtual	void		run		(void);
 	int32_t		bufferContent;
 #ifdef	HAVE_SPECTRUM
@@ -118,6 +122,11 @@ signals:
 	void		show_avgTokenLength	(int);
 	void		setSynced		(char);
     void		setPresent		(char);
+
+public slots:
+    void    FineOffsetSliderSlot(int value);
+    void    SyncSetter(bool value);
+    void    Timeout();
 };
 #endif
 

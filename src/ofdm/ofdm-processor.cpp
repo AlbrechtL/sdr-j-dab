@@ -68,8 +68,8 @@ int32_t	i;
 	localPhase		= 0;
 
 	for (i = 0; i < INPUT_RATE; i ++)
-	   oscillatorTable [i] = DSPCOMPLEX (cos (2.0 * M_PI * i / INPUT_RATE),
-	                                     sin (2.0 * M_PI * i / INPUT_RATE));
+       oscillatorTable [i] = DSPCOMPLEX (cos (2.0 * M_PI * i / INPUT_RATE),
+                                         sin (2.0 * M_PI * i / INPUT_RATE));
 
 	connect (this, SIGNAL (show_fineCorrector (int)),
 	         myRadioInterface, SLOT (set_fineCorrectorDisplay (int)));
@@ -82,7 +82,17 @@ int32_t	i;
     connect (this, SIGNAL (setPresent (char)),
              myRadioInterface, SLOT (setSignalPresent (char)));
 
+    connect (myRadioInterface, SIGNAL (FineOffsetSliderSignal(int)),
+                  this, SLOT (FineOffsetSliderSlot (int)));
+
+    connect (myRadioInterface, SIGNAL (SyncSetter(bool)),
+                  this, SLOT (SyncSetter (bool)));
+
 	bufferContent	= 0;
+    SliderValue = 0;
+    isSync = false;
+    isSyncLast = false;
+    isTimerIsRunning = false;
 #ifdef	HAVE_SPECTRUM
 	bufferSize	= 32768;
 	this	-> spectrumBuffer	= spectrumBuffer;
@@ -153,7 +163,7 @@ DSPCOMPLEX temp;
 #endif
 	localPhase	-= phase;
 	localPhase	= (localPhase + INPUT_RATE) % INPUT_RATE;
-	temp		*= oscillatorTable [localPhase];
+    temp		*= oscillatorTable [localPhase];
 	sLevel		= 0.00001 * jan_abs (temp) + (1 - 0.00001) * sLevel;
 #define	N	7
 	sampleCnt	++;
@@ -210,7 +220,7 @@ int32_t		i;
 	   if (localCounter < bufferSize) 
 	      localBuffer [localCounter ++]	= v [i];
 #endif
-	   v [i]	*= oscillatorTable [localPhase];
+       v [i]	*= oscillatorTable [localPhase];
 	   sLevel	= 0.00001 * jan_abs (v [i]) + (1 - 0.00001) * sLevel;
 	}
 
@@ -564,13 +574,17 @@ OFDM_SYMBOLS:
 //	We try to get an estimate of the fine error by looking
 //	at the phase difference between prefix and real data
 //	we average over the whole frame
-
+static int cnt = 0;
 	   FreqCorr		= DSPCOMPLEX (0, 0);
+       cnt=0;
 	   for (ofdmSymbolCount = 2;
 	        ofdmSymbolCount <= 4; ofdmSymbolCount ++) {
 	      getSamples (ofdmBuffer, T_s, coarseCorrector + fineCorrector);
 	      for (i = (int)T_u; i < (int)T_s; i ++) 
+          {
 	         FreqCorr += ofdmBuffer [i] * conj (ofdmBuffer [i - T_u]);
+             cnt++;
+          }
 	  
 	      my_ofdmDecoder -> processToken (ofdmBuffer, ibits, ofdmSymbolCount);
 	      my_ficHandler -> process_ficBlock (ibits, ofdmSymbolCount);
@@ -583,15 +597,29 @@ OFDM_SYMBOLS:
 	        ofdmSymbolCount ++) {
 	      getSamples (ofdmBuffer, T_s, coarseCorrector + fineCorrector);
 	      for (i = (int32_t)T_u; i < (int32_t)T_s; i ++) 
-	         FreqCorr += ofdmBuffer [i] * conj (ofdmBuffer [i - T_u]);
+          {
+             FreqCorr += ofdmBuffer [i] * conj (ofdmBuffer [i - T_u]);
+             cnt++;
+          }
 
 	      my_ofdmDecoder -> processToken (ofdmBuffer, ibits, ofdmSymbolCount);
-	      my_mscHandler -> process_mscBlock (ibits, ofdmSymbolCount);
+          my_mscHandler -> process_mscBlock (ibits, ofdmSymbolCount,isSync);
 	   }
 //
 //	We integrate the error with the correction term
-	   fineCorrector +=
-	         0.1 * arg (FreqCorr) / M_PI * (params -> carrierDiff / 2);
+       float argFreqCorr = arg(FreqCorr);
+
+       //if(isSync)
+       {
+        fineCorrector += 0.1 * argFreqCorr / M_PI * (params -> carrierDiff / 2);
+       }
+      /* else
+       {
+        //fineCorrector = SliderValue;
+           fineCorrector += 10;
+           if(fineCorrector >= 499)
+               fineCorrector = -499;
+       }*/
 //
 //	OK, at the end of the frame
 //	assume everything went well and shift T_null samples
@@ -614,7 +642,7 @@ OFDM_SYMBOLS:
 	   counter	= 0;
 
 static int waar	= 0;
-static	int	corrector	= 1;
+static	int	corrector	= 0;
 static	int	oldCorrection	= 0;
 
 	   if ((++ waar > 6) && f2Correction) {
@@ -624,11 +652,11 @@ static	int	oldCorrection	= 0;
 	         corrector = -corrector;
 	      }
 	      oldCorrection = correction;
-	      coarseCorrector	+= correction * params -> carrierDiff;
+          coarseCorrector	+= correction * params -> carrierDiff;
 	      waar = 0;
 	   }
 
-	   if (fineCorrector > params -> carrierDiff / 2) {
+      if (fineCorrector > params -> carrierDiff / 2) {
 	      coarseCorrector += params -> carrierDiff;
 	      fineCorrector -= params -> carrierDiff;
 	   }
@@ -636,7 +664,7 @@ static	int	oldCorrection	= 0;
 	   if (fineCorrector < -params -> carrierDiff / 2) {
 	      coarseCorrector -= params -> carrierDiff;
 	      fineCorrector += params -> carrierDiff;
-	   }
+       }
 //	and off we go, up to the next frame
 	   goto SyncOnPhase;
 	}
@@ -679,3 +707,29 @@ void	ofdmProcessor::stop		(void) {
 	running		= false;
 }
 
+
+void    ofdmProcessor::FineOffsetSliderSlot(int value)
+{
+    //fineCorrector = value;
+}
+
+void    ofdmProcessor::SyncSetter(bool value)
+{
+    if(value)
+    {
+        QTimer::singleShot(5000, this, SLOT(Timeout()));
+        isSync = true;
+        isTimerIsRunning = true;
+    }
+
+    if(isTimerIsRunning)
+        isSyncLast = value;
+    else
+        isSync = value;
+}
+
+void    ofdmProcessor::Timeout()
+{
+    isSync = isSyncLast;
+    isTimerIsRunning = false;
+}

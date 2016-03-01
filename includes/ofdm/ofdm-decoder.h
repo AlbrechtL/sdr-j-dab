@@ -57,8 +57,10 @@ private:
 	int32_t		T_u;
 	int32_t		carriers;
 	int16_t		getMiddle	(float *);
+    int16_t     getMiddle2 (void);
 	int32_t	delta;
 	DSPCOMPLEX	*phaseReference;
+    DSPCOMPLEX	*syncBuffer2;
 	common_fft	*fft_handler;
 	DSPCOMPLEX	*fft_buffer;
 	float		*syncBuffer;

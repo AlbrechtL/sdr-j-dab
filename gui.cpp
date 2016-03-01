@@ -233,6 +233,9 @@ int16_t	i, k;
 #endif
     connect (TestUIButton, SIGNAL (clicked (void)),
                   this, SLOT (TestUIButtonClicked (void)));
+    connect (FineOffsetSlider, SIGNAL (valueChanged(int)),
+                  this, SLOT (FineOffsetSliderSlot (int)));
+
 
 //
 //	Timers
@@ -384,10 +387,12 @@ QDateTime	currentTime = QDateTime::currentDateTime ();
 //
 void	RadioInterface::set_fineCorrectorDisplay (int v) {
 	fineCorrectorDisplay	-> display (v);
+    FineOffsetSlider->setValue(v);
 }
 
 void	RadioInterface::set_coarseCorrectorDisplay (int v) {
 	coarseCorrectorDisplay	-> display (v);
+    //myRig->set(v*1000);
 }
 
 void	RadioInterface::set_avgTokenLengthDisplay (int n) {
@@ -1350,11 +1355,13 @@ void	RadioInterface::setFICCRC	(char b) {
        case 1:
           FICCRCLabel ->
                    setStyleSheet ("QLabel {background-color : green}");
+          SyncSetter(true);
           break;
 
        default:
           FICCRCLabel ->
                    setStyleSheet ("QLabel {background-color : red}");
+          SyncSetter(false);
           break;
     }
 }
@@ -1396,4 +1403,9 @@ void	RadioInterface::TestUIButtonClicked (void) {
     else
         dabMainWindow->hide();
 
+}
+
+void    RadioInterface::FineOffsetSliderSlot(int value)
+{
+    emit FineOffsetSliderSignal(value);
 }

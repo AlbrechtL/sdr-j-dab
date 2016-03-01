@@ -193,7 +193,7 @@ int16_t	i;
 	connect (KhzOffset, SIGNAL (valueChanged (int)),
 	         this, SLOT (set_KhzOffset (int)));
 	connect (rateAdjustment, SIGNAL (valueChanged (int)),
-	         this, SLOT (adjustRate (int)));
+             this, SLOT (set_KhzOffset (int)));
 	connect (checkAgc, SIGNAL (stateChanged (int)),
 	         this, SLOT (setAgc (int)));
 
@@ -312,8 +312,10 @@ void	dabStick::set_fCorrection	(int32_t ppm) {
 }
 
 void	dabStick::set_KhzOffset	(int32_t o) {
-	vfoOffset	= Khz (o);
+    vfoOffset	= o;
 	(void)(this -> rtlsdr_set_center_freq (device, lastFrequency + vfoOffset));
+
+    fprintf(stderr,"Mid Freq: %i\n",(int32_t)(this -> rtlsdr_get_center_freq (device)));
 }
 
 
