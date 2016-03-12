@@ -107,11 +107,6 @@ private:
 	int16_t		numberofDevices;
 
 	void		setTuner		(int32_t);
-	QTimer		*sampleTimer;
-
-	void		stop_lcdTimer		(void);
-	int32_t		Panel;
-	int16_t		CurrentRig;
 	QTimer		*displayTimer;
 	void		IncrementFrequency	(int32_t);
 
@@ -135,24 +130,24 @@ const	char		*get_programm_language_string (uint8_t);
 	QLabel		*pictureLabel;
 	QUdpSocket	DSCTy_59_socket;
 private slots:
-	void	setStart		(void);
-	void	updateTimeDisplay	(void);
-	void	setStreamOutSelector	(int);
-	void	setScopeWidth		(int);
+	void		setStart	(void);
+	void		updateTimeDisplay	(void);
+	void		setStreamOutSelector	(int);
+	void		setScopeWidth		(int);
 
-	void	selectMode		(const QString &);
-	void	autoCorrector_on	(void);
+	void		selectMode		(const QString &);
+	void		autoCorrector_on	(void);
 
-	void	abortSystem		(int);
-	void	TerminateProcess	(void);
-	void	set_bandSelect		(QString);
-	void	set_channelSelect	(QString);
-	void	setDevice		(QString);
-	void	selectService		(QModelIndex);
-	void	set_dumping		(void);
-	void	set_mp2File		(void);
-	void	set_mp4File		(void);
-	void	set_audioDump		(void);
+	void		abortSystem		(int);
+	void		TerminateProcess	(void);
+	void		set_bandSelect		(QString);
+	void		set_channelSelect	(QString);
+	void		setDevice		(QString);
+	void		selectService		(QModelIndex);
+	void		set_dumping		(void);
+	void		set_mp2File		(void);
+	void		set_mp4File		(void);
+	void		set_audioDump		(void);
 public slots:
 	void	set_fineCorrectorDisplay	(int);
 	void	set_coarseCorrectorDisplay	(int);

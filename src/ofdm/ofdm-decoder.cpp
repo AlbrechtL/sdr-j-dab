@@ -31,13 +31,16 @@
 #define	SYNC_LENGTH	15
 //
 //	The search range for the coarse frequency offset is
-#define	SEARCH_RANGE	36
+//	It is pretty large, since it must deal with oscillator offsets
+//	of up to 34, 35 Khz
+#define	SEARCH_RANGE		(2 * 36)
+#define	CORRELATION_LENGTH	18
 
 	ofdmDecoder::ofdmDecoder	(DabParams	*p,
 	                                 RingBuffer<DSPCOMPLEX> *iqBuffer,
 	                                 DSPCOMPLEX	*refTable,
 	                                 RadioInterface *mr) {
-
+int16_t	i;
 	this	-> params		= p;
 	this	-> iqBuffer		= iqBuffer;
 	this	-> refTable		= refTable;
@@ -45,7 +48,6 @@
 	this	-> T_s			= params	-> T_s;
 	this	-> T_u			= params	-> T_u;
 	this	-> carriers		= params	-> K;
-
 	connect (this, SIGNAL (showIQ (int)),
 	         mr, SLOT (showIQ (int)));
 	this	-> delta	= T_s - T_u;
@@ -54,22 +56,32 @@
 	phaseReference		= new DSPCOMPLEX [T_u];
 	myMapper		= new permVector (params);
 	iqCount			= 0;
-	displayToken		= 3;
+	displayToken		= 1;
 //
 	connect (this, SIGNAL (show_snr (int)),
 	         mr, SLOT (show_snr (int)));
 	snrCount		= 0;
 	snr			= 0;	
+//
+//	and for the correlation:
+	refArg			= new float [CORRELATION_LENGTH];
+	correlationVector	= new float [SEARCH_RANGE + CORRELATION_LENGTH];
+	for (i = 0; i < CORRELATION_LENGTH; i ++)  {
+	   refArg [i] = arg (refTable [(T_u + i) % T_u] *
+	                        conj (refTable [(T_u + i + 1) % T_u]));
+	}
 }
 
 	ofdmDecoder::~ofdmDecoder	(void) {
 	delete	fft_handler;
 	delete	phaseReference;
 	delete	myMapper;
+	delete[]	correlationVector;
+	delete[]	refArg;
 }
 
 int16_t	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi, bool flag) {
-int16_t	i, index = 100;
+int16_t	i, j, index_1 = 100, index_2	= 100;
 float	Min	= 1000;
 
 	memcpy (fft_buffer, vi, T_u * sizeof (DSPCOMPLEX));
@@ -90,48 +102,67 @@ float	Min	= 1000;
 #ifdef	SIMPLE_SYNCHRONIZATION
 	return getMiddle (fft_buffer);
 #endif
-	for (i = T_u  - SEARCH_RANGE; i < T_u + SEARCH_RANGE; i ++) {
-	   if (abs (fft_buffer [i % T_u]) < Min) {
-              float a1  = arg (fft_buffer [(i + 1) % T_u] *
-                               conj (fft_buffer [(i + 2) % T_u]));
-	      float a3	= abs (arg (fft_buffer [(i + 1) % T_u] *
-	      	                    conj (fft_buffer [(i + 3) % T_u])));
-	      float a4	= abs (arg (fft_buffer [(i + 3) % T_u] *
-	      	                    conj (fft_buffer [(i + 4) % T_u])));
-	      float a5	= abs (arg (fft_buffer [(i + 4) % T_u] *
-	      	                    conj (fft_buffer [(i + 5) % T_u])));
-	      float a6	= abs (arg (fft_buffer [(i + 5) % T_u] *
-	      	                    conj (fft_buffer [(i + 6) % T_u])));
-	  
-	      if ((abs (abs (a1 / M_PI) - 1) < 0.15) &&
-	          (abs (a3) < 0.45) && (abs (a4) < 0.45) &&
-	          (abs (a5) < 0.45) && (abs (a6) < 0.45)) {
-                 index  = i;
-                 Min    = abs (fft_buffer [i % T_u]);
-              }
-           }
-	}
+//
 
-#ifdef	SHOW_COARSE_OFFSET_PROGRESS
-	if (index != 100) {	// check on reasonability
-	   float a1	= arg (fft_buffer [(index + 1) % T_u] *
-	                      conj (fft_buffer [(index + 3) % T_u])) / M_PI;
-	   float a2	= arg (fft_buffer [(index + 3) % T_u] *
-	                      conj (fft_buffer [(index + 4) % T_u])) / M_PI;
-	   float a3	= arg (fft_buffer [(index + 4) % T_u] *
-	                      conj (fft_buffer [(index + 5) % T_u])) / M_PI;
-	   float a4	= arg (fft_buffer [(index + 5) % T_u] *
-	                      conj (fft_buffer [(index + 6) % T_u])) / M_PI;
-	   fprintf (stderr, " %d\t%f\t%f\t%f\t%f (%f)\n",
-	                    index - T_u,
-	                    abs (a1), abs (a2), abs (a3), abs (a4),
-	                    abs (arg (fft_buffer [(index + 1) % T_u] *
-	                         conj (fft_buffer [(index + 2) % T_u])) / M_PI));
+#ifdef	FULL_CORRELATION
+//
+//	The phase differences are computed once
+	for (i = 0; i < SEARCH_RANGE + CORRELATION_LENGTH; i ++) {
+	   int16_t baseIndex = T_u - SEARCH_RANGE / 2 + i;
+	   correlationVector [i] =
+	                   arg (fft_buffer [baseIndex % T_u] *
+	                    conj (fft_buffer [(baseIndex + 1) % T_u]));
 	}
+	float	MMax	= 0;
+	float	oldMMax	= 0;
+	for (i = 0; i < SEARCH_RANGE; i ++) {
+	   float sum	= 0;
+	   for (j = 1; j < CORRELATION_LENGTH; j ++) {
+	      sum += abs (refArg [j] * correlationVector [i + j]);
+	      if (sum > MMax) {
+	         oldMMax	= MMax;
+	         MMax = sum;
+	         index_1 = i;
+	      }
+	   }
+	}
+//
+//	Now map the index back to the right carrier
+	return T_u - SEARCH_RANGE / 2 + index_1 - T_u;
+#else
+//
+//	An alternative way is to look at a special pattern consisting
+//	of zeros in the row of args between successive carriers.
+	float Mmin	= 1000;
+	float OMmin	= 1000;
+	for (i = T_u - SEARCH_RANGE / 2; i < T_u + SEARCH_RANGE / 2; i ++) {
+              float a1  =  abs (abs (arg (fft_buffer [(i + 1) % T_u] *
+                                conj (fft_buffer [(i + 2) % T_u])) / M_PI) - 1);
+	      float a2	= abs (arg (fft_buffer [(i + 1) % T_u] *
+	      	                    conj (fft_buffer [(i + 3) % T_u])));
+	      float a3	= abs (arg (fft_buffer [(i + 3) % T_u] *
+	      	                    conj (fft_buffer [(i + 4) % T_u])));
+	      float a4	= abs (arg (fft_buffer [(i + 4) % T_u] *
+	      	                    conj (fft_buffer [(i + 5) % T_u])));
+	      float a5	= abs (arg (fft_buffer [(i + 5) % T_u] *
+	      	                    conj (fft_buffer [(i + 6) % T_u])));
+	      float b1	= abs (abs (arg (fft_buffer [(i + 16 + 1) % T_u] *
+	      	                    conj (fft_buffer [(i + 16 + 3) % T_u])) / M_PI) - 1);
+	      float b2	= abs (arg (fft_buffer [(i + 16 + 3) % T_u] *
+	      	                    conj (fft_buffer [(i + 16 + 4) % T_u])));
+	      float b3	= abs (arg (fft_buffer [(i + 16 + 4) % T_u] *
+	      	                    conj (fft_buffer [(i + 16 + 5) % T_u])));
+	      float b4	= abs (arg (fft_buffer [(i + 16 + 5) % T_u] *
+	      	                    conj (fft_buffer [(i + 16 + 6) % T_u])));
+	      float sum = a1 + a2 + a3 + a4 + a5 + b1 + b2 + b3 + b4;
+	      if (sum < Mmin) {
+	        OMmin = Mmin;
+	         Mmin = sum;
+	         index_2 = i;
+	      }
+	}
+	return index_2 - T_u;
 #endif
-	if (index == 100)
-	   return 100;
-	return index - T_u;
 }
 
 //	for the other blocks of data, the first step is to go from
@@ -161,8 +192,8 @@ static		int cnt	= 0;
 	   ibits [i]		= - real (r1) / ab1 * 127.0;
 	   ibits [carriers + i] = - imag (r1) / ab1 * 127.0;
 	}
-//
-//	and, from time to time we show some clouds.
+
+//	and, from time to time we show some clouds in the "old" GUI
 //	Since we are in a different thread, directly calling of the
 //	iqBuffer is not done. We use an intermediate buffer
 //	Note that we do it in two steps since the

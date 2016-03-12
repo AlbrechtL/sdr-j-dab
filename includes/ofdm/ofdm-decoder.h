@@ -69,6 +69,8 @@ private:
 	int16_t		snr;
 	int16_t		strength;
 	int16_t		newStrength	(DSPCOMPLEX *);
+	float		*correlationVector;
+	float		*refArg;
 signals:
 	void		show_snr	(int);
 	void		showIQ		(int);

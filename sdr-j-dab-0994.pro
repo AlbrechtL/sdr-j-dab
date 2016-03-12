@@ -15,7 +15,7 @@ QMAKE_LFLAGS	+= -flto
 #QMAKE_CXXFLAGS	+= -ffast-math -g
 #QMAKE_LFLAGS	+= -g
 #CONFIG		+= NO_SSE_SUPPORT 
-DEFINES		+= SHOW_COARSE_OFFSET_PROGRESS
+#DEFINES	+= SHOW_COARSE_OFFSET_PROGRESS
 #DEFINES	+= SIMPLE_SYNCHRONIZATION
 DEPENDPATH += . \
 	      ./src \
@@ -184,7 +184,7 @@ CONFIG		+= airspy
 #CONFIG		+= airspy-exp
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__
-#DEFINES		+= MSC_DATA__		# use at your own risk
+DEFINES		+= MSC_DATA__		# use at your own risk
 }
 
 #	Unfortunately, under Windows Mingw does not provide SSE support
