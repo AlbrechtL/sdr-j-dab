@@ -56,7 +56,7 @@ int16_t	i;
 	phaseReference		= new DSPCOMPLEX [T_u];
 	myMapper		= new permVector (params);
 	iqCount			= 0;
-	displayToken		= 1;
+	displayToken		= 2;
 //
 	connect (this, SIGNAL (show_snr (int)),
 	         mr, SLOT (show_snr (int)));

@@ -101,7 +101,7 @@ int16_t	i, k;
 
 	iqBuffer		= new RingBuffer<DSPCOMPLEX> (2 * 1536);
 	iqDisplaysize	=
-	               dabSettings -> value ("iqDisplaysize", 256). toInt ();
+	               dabSettings -> value ("iqDisplaysize", 2 * 256). toInt ();
 	myIQDisplay		= new IQDisplay (iqDisplay, iqDisplaysize);
 //
 //	'Concurrent' indicates whether the mp4/mp2 processing part
@@ -1153,7 +1153,6 @@ double	avg	= 0;
 
 	avg	/= t;
 	myIQDisplay -> DisplayIQ (Values, scopeWidth / avg);
-//	   myIQDisplay -> DisplayIQ (Values [i], scopeWidth * 0.0000005);
 }
 
 #ifdef	HAVE_SPECTRUM
