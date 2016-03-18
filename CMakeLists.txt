@@ -1,8 +1,25 @@
 cmake_minimum_required( VERSION 2.8.11 )
-set (CMAKE_BUILD_TYPE Release )
 set (objectName sdr-j-dabreceiver-0.993)
 set ( CMAKE_INSTALL_PREFIX . )
 add_definitions ( -Wall)
+
+if(MINGW)
+    add_definitions ( -municode)
+endif()
+
+########################################################################
+# select the release build type by default to get optimization flags
+########################################################################
+if(NOT CMAKE_BUILD_TYPE)
+   set(CMAKE_BUILD_TYPE "Release")
+   message(STATUS "Build type not specified: defaulting to release.")
+endif(NOT CMAKE_BUILD_TYPE)
+set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "")
+
+### make sure our local CMake Modules path comes first
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
+
+
 ######################################################################
 #       R E A D  T H I S
 #####################################################################
@@ -23,6 +40,9 @@ add_definitions ( -Wall)
 #	add_definitions (-DMOT_BASICS__) 	# use at your own risk
 #	add_definitions (-DMSC_DATA__)		# use at your own risk
 ########################################################################
+
+	find_package (PkgConfig)
+
 	find_package (Qt5Core REQUIRED)
 	find_package (Qt5Widgets REQUIRED)
 	find_package (Qt5Network REQUIRED)
@@ -31,112 +51,34 @@ add_definitions ( -Wall)
 	include_directories (
 	      ${Qt5Network_INCLUDE_DIRS}
 	)
-	find_library (DYNAMIC_LOAD dl)
-	if(NOT(DYNAMIC_LOAD))
-	   message(FATAL_ERROR "please install -ldl")
-	else(NOT(DYNAMIC_LOAD))
-	   set(extraLibs ${DYNAMIC_LOAD})
-	endif(NOT(DYNAMIC_LOAD))
-#
 
-#	find_library(QWT qwt)
-	if (QWT_INCLUDE_DIRS)
-#	Already in cache, be silent
-	   set (QWT_FIND_QUIETLY TRUE)
-	endif (QWT_INCLUDE_DIRS)
+        find_package(Qwt)
+        if (NOT QWT_FOUND)
+            message(FATAL_ERROR "please install qwt library")
+        endif ()
 
-	find_path (QWT_INCLUDE_DIR
-	           NAMES qwt_plot.h
-	           PATHS
-	           /usr/local/include/qwt-qt5
-	           /usr/local/include/qwt
-	           /usr/local/include/qwt6
-	           /usr/include/qwt6
-	           /usr/include/qwt
-	)
+        find_package(FFTW3f)
+        if (NOT FFTW3F_FOUND)
+            message(FATAL_ERROR "please install FFTW3")
+        endif ()
 
-	list (APPEND QWT_INCLUDE_DIRS ${QWT_INCLUDE_DIR} )
-	find_library (QWT_LIBRARIES
-	              NAMES qwt-qt5 qwt qwt6
-#	              PATHS /usr/local/lib /usr/lib
-                      PATH_SUFFIXES lib64 Lib64 lib Lib
-	)
+        find_package(Portaudio)
+        if (NOT PORTAUDIO_FOUND)
+            message(FATAL_ERROR "please install portaudio V19")
+        endif ()
+        list(APPEND extraLibs ${PORTAUDIO_LIBRARIES})
 
-#	message (STATUS ${QWT_LIBRARIES} ${QWT_INCLUDE_DIRS})
-#	handle the QUIETLY and REQUIRED arguments and set QWT_FOUND to TRUE if 
-#	all listed variables are TRUE
-	include (FindPackageHandleStandardArgs)
-	find_package_handle_standard_args (
-	                     Qwt DEFAULT_MSG QWT_LIBRARIES QWT_INCLUDE_DIRS )
-	MARK_AS_ADVANCED (QWT_LIBRARIES QWT_INCLUDE_DIRS)
-#	Find_Package(PkgConfig)
-#	pkg_check_modules(FFTW fftw3f REQUIRED)
-#	link_directories(${FFTW_INCLUDE_DIRS})
-#	Find the native FFTW includes and library
-#
-#	FFTW_INCLUDES    - where to find fftw3f.h
-#	FFTW_LIBRARIES   - List of libraries when using FFTW.
-#	FFTW_FOUND       - True if FFTW found.
+        find_package(Faad)
+        if (NOT FAAD_FOUND )
+            message(FATAL_ERROR "please install libfaad")
+        endif ()
 
-	if (FFTW_INCLUDE_DIRS)
-#	Already in cache, be silent
-	   set (FFTW_FIND_QUIETLY TRUE)
-	endif (FFTW_INCLUDE_DIRS)
+        find_package(LibSndFile)
+        if (NOT LIBSNDFILE_FOUND)
+            message(FATAL_ERROR "please install libsndfile")
+        endif ()
+        list(APPEND extraLibs ${LIBSNDFILE_LIBRARY})
 
-	find_path (FFTW_INCLUDE_DIR fftw3.h
-	           HINTS
-                   ENV FFTW_ROOT
-                   PATHS 
-	           PATH_SUFFIXES
-	           include
-	           Include
-	)
-
-	list (APPEND FFTW_INCLUDE_DIRS ${FFTW_INCLUDE_DIR})
-	find_library (FFTW_LIBRARIES NAMES fftw3f
-                      HINTS ENV FFTW_ROOT
-                      PATHS
-                      PATH_SUFFIXES lib64 Lib64 lib Lib)
-
-	message (STATUS ${FFTW_LIBRARIES} ${FFTW_INCLUDE_DIRS})
-#	handle the QUIETLY and REQUIRED arguments and set FFTW_FOUND to TRUE if
-#	all listed variables are TRUE
-
-	include (FindPackageHandleStandardArgs)
-	find_package_handle_standard_args (
-	                  FFTW DEFAULT_MSG FFTW_LIBRARIES FFTW_INCLUDE_DIRS)
-	mark_as_advanced (FFTW_LIBRARIES FFTW_INCLUDE_DIRS)
-
-	Find_Package (PkgConfig)
-	find_library (FAAD faad)
-	if (NOT(FAAD))
-	   message(FATAL_ERROR "please install libfaad")
-	else (NOT(FAAD))
-	set (extraLibs  ${extraLibs} ${FAAD})
-	endif(NOT(FAAD))
-
-	find_library (PORTAUDIO portaudio)
-	if (NOT(PORTAUDIO))
-	   message(FATAL_ERROR "please install portaudio V19")
-	else(NOT(PORTAUDIO))
-	   set (extraLibs  ${extraLibs} ${PORTAUDIO})
-	endif(NOT(PORTAUDIO))
-
-	SET (CMAKE_FIND_LIBRARY_SUFFIXES .so .a)
-
-	find_library (USB1 usb-1.0 HINTS /usr/lib)
-	if (NOT(USB1))
-	   message (FATAL_ERROR "please install libusb-1.0")
-	else(NOT(USB1))
-	   set(extraLibs ${extraLibs} ${USB1})
-	endif(NOT(USB1))
-
-	find_library (SNDFILE sndfile)
-	if (NOT(SNDFILE))
-	   message (FATAL_ERROR "please install libsndfile")
-	else (NOT(SNDFILE))
-	   set (extraLibs ${extraLibs} ${SNDFILE})
-	endif (NOT(SNDFILE))
 
 	find_library (PTHREADS pthread)
 	if (NOT(PTHREADS))
@@ -178,7 +120,6 @@ add_definitions ( -Wall)
 	           ./src/input
 	           ./src/input/rawfiles
 	           ./src/input/wavfiles
-	           /usr/include/
 	)
 
 	set (${objectName}_HDRS
@@ -328,19 +269,11 @@ add_definitions ( -Wall)
 	endif (SDRPLAY)
 
 	if (AIRSPY)
-	   find_library (AIRSPY_LIB airspy)
-	   if (NOT(AIRSPY_LIB))
-	      message (FATAL_ERROR "please install airspy library")
-	   else (NOT(AIRSPY_LIB))
-	      set (extraLibs ${extraLibs} ${AIRSPY_LIB})
-	   endif()
-	   find_path (AIRSPYLIB_INCLUDE_DIR
-	              NAMES airspy.h
-	              PATHS
-	              /usr/local/include/
-	              /usr/local/include/libairspy
-	   )
-	   include_directories (${AIRSPYLIB_INCLUDE_DIR})
+           find_package(LibAIRSPY)
+           if (NOT LIBAIRSPY_FOUND)
+               message(FATAL_ERROR "please install airspy library")
+           endif ()
+	   ### include_directories (${AIRSPYLIB_INCLUDE_DIR})
 
 	   set (${objectName}_UIS
 	        ${${objectName}_UIS}
@@ -370,19 +303,11 @@ add_definitions ( -Wall)
 	endif (AIRSPY)
 
 	if (DABSTICK_NEW)
-	   find_library (RTLSDR rtlsdr)
-	   if (NOT(RTLSDR))
-	      message (FATAL_ERROR "please install librtlsdr")
-	   else (NOT(RTLSDR))
-	      set (extraLibs ${extraLibs} ${RTLSDR})
-	   endif()
-	   find_path (DABSTICK_INCLUDE_DIR
-	              NAMES rtl-sdr.h
-	              PATHS
-	              /usr/local/include/
-	              /usr/include/
-	   )
-	   include_directories (${RTLSDR_INCLUDE_DIR})
+           find_package(LibRTLSDR)
+           if (NOT LIBRTLSDR_FOUND)
+               message(FATAL_ERROR "please install librtlsdr")
+           endif ()
+	   ###include_directories (${RTLSDR_INCLUDE_DIR})
 
 	   set (${objectName}_UIS
 	        ${${objectName}_UIS}
@@ -415,19 +340,11 @@ add_definitions ( -Wall)
 	endif()
 #
 	if (DABSTICK_OSMO)
-	   find_library (RTLSDR rtlsdr)
-	   if (NOT(RTLSDR))
-	      message (FATAL_ERROR "please install librtlsdr")
-	   else (NOT(RTLSDR))
-	      set (extraLibs ${extraLibs} ${RTLSDR})
-	   endif()
-	   find_path (DABSTICK_INCLUDE_DIR
-	              NAMES rtl-sdr.h
-	              PATHS
-	              /usr/local/include/
-	              /usr/include/
-	   )
-	   include_directories (${RTLSDR_INCLUDE_DIR})
+           find_package(LibRTLSDR)
+           if (NOT LIBRTLSDR_FOUND)
+               message(FATAL_ERROR "please install librtlsdr")
+           endif ()
+	   ###include_directories (${RTLSDR_INCLUDE_DIR})
 
 	   set (${objectName}_UIS
 	        ${${objectName}_UIS}
@@ -528,8 +445,8 @@ add_definitions ( -Wall)
 	          ${QT5Widgets_INCLUDES}
 	          ${QT_QTCORE_INCLUDE_DIR}
 	          ${QT_QTGUI_INCLUDE_DIR}
-	          ${QWT_INCLUDE_DIRS}
 	          ${FFTW_INCLUDE_DIRS}
+	          ${QWT_INCLUDE_DIRS}
 	          ${PORTAUDIO_INCLUDE_DIRS}
 	          ${FAAD_INCLUDE_DIRS}
 	          ${SNDFILES_INCLUDE_DIRS}
@@ -547,10 +464,11 @@ add_definitions ( -Wall)
 	                       Qt5::Widgets
 	                       Qt5::Network
 	                       ${RTLTCP_lib}
-	                       ${FFTW_LIBRARIES}
+	                       ${FFTW3F_LIBRARIES}
 	                       ${extraLibs}
 	                       ${FAAD_LIBRARIES}
 	                       ${QWT_LIBRARIES}
+	                       ${CMAKE_DL_LIBS}
 	)
 
 	INSTALL (TARGETS ${objectName} DESTINATION ../linux-bin)
