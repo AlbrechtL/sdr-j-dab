@@ -19,6 +19,9 @@ add_definitions ( -Wall)
 	set(SPECTRUM true)
 
 #	add_definitions (-DSIMPLE_SYNCHRONIZATION)
+#	add_definitions (-DFULL_CORRELATION)
+#	add_definitions (-DMOT_BASICS__) 	# use at your own risk
+#	add_definitions (-DMSC_DATA__)		# use at your own risk
 ########################################################################
 	find_package (Qt5Core REQUIRED)
 	find_package (Qt5Widgets REQUIRED)

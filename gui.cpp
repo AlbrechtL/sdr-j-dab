@@ -343,12 +343,13 @@ void	RadioInterface::TerminateProcess (void) {
 	delete		myRig;
 	delete		our_audioSink;
 #ifdef	HAVE_SPECTRUM
-	delete spectrumHandler;
+	delete spectrumHandler;			// may have pending signals
+	spectrumHandler	= NULL;
 	fprintf (stderr, "the spectrumHandler is gone\n");
 #endif
 	accept ();
 	if (pictureLabel != NULL)
-	   delete pictureLabel;
+	   delete pictureLabel;			// there might be pending ops
 	pictureLabel	= NULL;
 	fprintf (stderr, "Termination started");
 //	delete		displayTimer;
@@ -1157,7 +1158,8 @@ double	avg	= 0;
 
 #ifdef	HAVE_SPECTRUM
 void	RadioInterface::showSpectrum	(int32_t amount) {
-	spectrumHandler	-> showSpectrum (amount, vfoFrequency);
+	if (spectrumHandler != NULL)
+	   spectrumHandler	-> showSpectrum (amount, vfoFrequency);
 }
 #endif
 
@@ -1348,7 +1350,6 @@ void	RadioInterface::setSynced	(char b) {
 void	RadioInterface::showLabel	(QString s) {
 	dynamicLabel	-> setText (s);
 }
-
 
 void	RadioInterface::showMOT		(QByteArray data, int subtype) {
 	if (pictureLabel == NULL)
