@@ -116,7 +116,7 @@ int32_t		opt;
 	fflush (stdout);
 	fflush (stderr);
 	qDebug ("It is done\n");
-//	MyRadioInterface	-> ~RadioInterface ();
+	MyRadioInterface	-> ~RadioInterface ();
 	ISettings		-> ~QSettings ();
 	exit (1);
 }

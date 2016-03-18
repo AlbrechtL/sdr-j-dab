@@ -334,8 +334,8 @@ void	RadioInterface::TerminateProcess (void) {
 
 	my_mscHandler	-> stop	();		// might be concurrent
 	the_ofdmProcessor -> stop ();		// definitely concurrent
-	myRig		-> stopReader ();
-	our_audioSink	-> stop ();
+	myRig		-> stopReader ();	// may contain concurrency
+	our_audioSink	-> stop ();		// concurrent
 	dumpControlState (dabSettings);
 	delete		the_ofdmProcessor;
 	delete		my_ficHandler;
@@ -346,10 +346,10 @@ void	RadioInterface::TerminateProcess (void) {
 	delete spectrumHandler;
 	fprintf (stderr, "the spectrumHandler is gone\n");
 #endif
+	accept ();
 	if (pictureLabel != NULL)
 	   delete pictureLabel;
 	pictureLabel	= NULL;
-	accept ();
 	fprintf (stderr, "Termination started");
 //	delete		displayTimer;
 }

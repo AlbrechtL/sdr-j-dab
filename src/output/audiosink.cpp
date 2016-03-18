@@ -291,7 +291,7 @@ int32_t	available = _O_Buffer -> GetRingBufferWriteAvailable ();
 	if (dumpFile != NULL)
 	   sf_writef_float (dumpFile, buffer, amount);
 
-	_O_Buffer	-> putDataIntoBuffer (buffer, 4 * amount);
+	_O_Buffer	-> putDataIntoBuffer (buffer, 2 * amount);
 }
 //
 //	Conversion from 32 -> 48 is by first converting to 96000
