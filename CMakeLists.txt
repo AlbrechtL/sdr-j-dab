@@ -1,6 +1,5 @@
 cmake_minimum_required( VERSION 2.8.11 )
 set (objectName sdr-j-dabreceiver-0.993)
-set ( CMAKE_INSTALL_PREFIX . )
 add_definitions ( -Wall)
 
 if(MINGW)
@@ -471,4 +470,17 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	                       ${CMAKE_DL_LIBS}
 	)
 
-	INSTALL (TARGETS ${objectName} DESTINATION ../linux-bin)
+	INSTALL (TARGETS ${objectName} DESTINATION bin)
+
+########################################################################
+# Create uninstall target
+########################################################################
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+
