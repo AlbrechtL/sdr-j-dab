@@ -95,6 +95,9 @@ int16_t	i;
 	   if (i != 5)
 	      checkSum +=  ((data [2 * i] << 8) | data [2 * i + 1]);
 	checkSum = (checkSum >> 16) + (checkSum & 0xFFFF);
+	if ((~checkSum & 0xFFFF) != 0) {
+//	   fprintf (stderr, "checkSum = %x\n", checkSum);
+	}
 
 	switch (protocol) {
 	   case 17:			// UDP protocol

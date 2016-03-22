@@ -154,7 +154,6 @@ err:
 	airspySettings -> setValue ("mixer", mixerGain);
 	airspySettings -> setValue ("lna", lnaGain);
 	airspySettings	-> endGroup ();
-	myFrame	-> hide ();
 	if (Handle == NULL)
 	   goto err;
 	if (device) {

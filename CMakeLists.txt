@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 2.8.11 )
-set (objectName sdr-j-dabreceiver-0.993)
+set (objectName sdr-j-dabreceiver-0.994)
 add_definitions ( -Wall)
 
 if(MINGW)
@@ -35,9 +35,9 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	set(SPECTRUM true)
 
 #	add_definitions (-DSIMPLE_SYNCHRONIZATION)
-#	add_definitions (-DFULL_CORRELATION)
-#	add_definitions (-DMOT_BASICS__) 	# use at your own risk
-#	add_definitions (-DMSC_DATA__)		# use at your own risk
+	add_definitions (-DFULL_CORRELATION)
+	add_definitions (-DMOT_BASICS__) 	# use at your own risk
+	add_definitions (-DMSC_DATA__)		# use at your own risk
 ########################################################################
 
 	find_package (PkgConfig)
