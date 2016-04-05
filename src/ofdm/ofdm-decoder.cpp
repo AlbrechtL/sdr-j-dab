@@ -81,8 +81,10 @@ int16_t	i;
 }
 
 int16_t	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi, bool flag) {
-int16_t	i, j, index_1 = 100, index_2	= 100;
-float	Min	= 1000;
+int16_t	i, j, index_1 = 100;
+#ifndef	FULL_CORRELATION
+int16_t index_2	= 100;
+#endif
 
 	memcpy (fft_buffer, vi, T_u * sizeof (DSPCOMPLEX));
 	fft_handler	-> do_FFT ();
@@ -114,13 +116,11 @@ float	Min	= 1000;
 	                    conj (fft_buffer [(baseIndex + 1) % T_u]));
 	}
 	float	MMax	= 0;
-	float	oldMMax	= 0;
 	for (i = 0; i < SEARCH_RANGE; i ++) {
 	   float sum	= 0;
 	   for (j = 1; j < CORRELATION_LENGTH; j ++) {
 	      sum += abs (refArg [j] * correlationVector [i + j]);
 	      if (sum > MMax) {
-	         oldMMax	= MMax;
 	         MMax = sum;
 	         index_1 = i;
 	      }

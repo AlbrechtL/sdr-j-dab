@@ -110,7 +110,8 @@ int16_t	i;
 int32_t	dabSerial::process	(int16_t *Data, int16_t cnt) {
 int16_t	i, j;
 uint8_t	shiftRegister [9];
-//
+
+	(void)cnt;		// sorry
 //	first: interleaving
 	for (i = 0; i < fragmentSize; i ++) {
 	   interleaveData [i][interleaveDelays [i & 017]] = Data [i];
@@ -154,6 +155,7 @@ void	dabSerial::stopRunning (void) {
 void	dabSerial::setFiles	(FILE *f1, FILE *f2) {
 
 	mp2File		= f1;
+	(void)f2;
 	if (dabModus == DAB)
 	   our_dabProcessor	-> setFile (f1);
 }

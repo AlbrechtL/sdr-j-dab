@@ -371,7 +371,6 @@ uint32_t frame_size;
 int32_t	bound, sblimit;
 int32_t sb, ch, gr, part, idx, nch, i, j, sum;
 int32_t table_idx;
-uint8_t	id;
 
 	numberofFrames ++;
 	if (numberofFrames >= 50) {
@@ -572,7 +571,6 @@ uint8_t	id;
 //	bits to MP2 frames, amount is amount of bits
 void	mp2Processor::addtoFrame (uint8_t *v, int16_t amount) {
 int16_t	i, j;
-int16_t x;
 int16_t	lf	= baudRate == 48000 ? MP2framesize : 2 * MP2framesize;
 
 	for (i = 0; i < amount; i ++) {

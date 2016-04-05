@@ -107,7 +107,6 @@ NeAACDecFrameInfo	hInfo;
 	   uint8_t asc[2];
 	   asc[0] = 0b00010 << 3 | core_sr_index >> 1;
 	   asc[1] = (core_sr_index & 0x01) << 7 | core_ch_config << 3 | 0b100;
-	   int len;
 	   long int init_result = NeAACDecInit2 (aacHandle,
 	                                         asc,
 	                                         sizeof (asc),

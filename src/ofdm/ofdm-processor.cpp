@@ -367,7 +367,7 @@ OFDM_PRS:
 
 	if (f2Correction) {
 	   if ((correction == 0) && (previous_1 == 0) && (previous_2 == 0))
-	      f2Correction == false;
+	      f2Correction = false;
 	   else
 	   if (correction != 100) {	// finding an offset succeeded
 	      coarseCorrector	+= correction * params -> carrierDiff;
@@ -404,7 +404,7 @@ OFDM_SYMBOLS:
 //	and similar for the (params -> L - 4) MSC blocks
 //	   FreqCorr	= 0;
 	   for (ofdmSymbolCount = 5;
-	        ofdmSymbolCount <= params -> L;
+	        (uint16_t)ofdmSymbolCount <= (uint16_t)(params -> L);
 	        ofdmSymbolCount ++) {
 	      getSamples (ofdmBuffer, T_s, coarseCorrector + fineCorrector);
 	      for (i = (int32_t)T_u; i < (int32_t)T_s; i ++) 

@@ -29,18 +29,15 @@
 #include	<QDebug>
 /*
  *	The class is the sink for the data generated
- *	It resembles the older paWriter class, however, we have
- *	different data types (complex/float32 vs int16). We really
- *	should make a single generic class of it.
+ *	Note that for DAB, we always take 48000 as outputrate
+ *	The only parameter is the combobox for selection (which
+ *	we fill first)
  */
-	audioSink::audioSink	(int32_t rate, int32_t size) {
+	audioSink::audioSink	(QComboBox *s) {
 int32_t	i;
 
-	this	-> CardRate	= rate;
-	if ((size & (size - 1)) != 0)
-	   this	-> size		= 16384;
-	else
-	   this	-> size		= size;
+	this	-> streamSelector	= s;
+
 	_O_Buffer		= new RingBuffer<float>(16 * 32768);
 	portAudio		= false;
 	writerRunning		= false;
@@ -57,8 +54,20 @@ int32_t	i;
 	   qDebug ("Api %d is %s\n", i, Pa_GetHostApiInfo (i) -> name);
 
 	numofDevices	= Pa_GetDeviceCount ();
+	
+	outTable	= new int16_t [numofDevices + 1];
+	for (i = 0; i < numofDevices; i ++)
+	   outTable [i] = -1;
+	ostream		= NULL;
+	setupChannels (streamSelector);
+	connect (streamSelector, SIGNAL (activated (int)),
+	         this,  SLOT (set_streamSelector (int)));
+	streamSelector	-> show ();
 	ostream		= NULL;
 	dumpFile	= NULL;
+//
+//	data may enter with different samplerates, all data
+//	is mapped onto a rate of 48000
 	f_16000		= new LowPassFIR (5, 16000, 48000);
 	f_24000		= new LowPassFIR (5, 24000, 48000);
 	f_32000		= new LowPassFIR (5, 32000, 96000);
@@ -72,7 +81,7 @@ int32_t	i;
 	      Pa_Sleep (1);
 	   writerRunning = false;
 	}
-
+	
 	writerRunning	= false;
 	if (ostream != NULL)
 	   Pa_CloseStream (ostream);
@@ -81,6 +90,7 @@ int32_t	i;
 	   Pa_Terminate ();
 
 	delete	_O_Buffer;
+	delete[]	outTable;
 }
 //
 bool	audioSink::selectDevice (int16_t odev) {
@@ -119,7 +129,7 @@ PaError err;
 	             &ostream,
 	             NULL,
 	             &outputParameters,
-	             CardRate,
+	             48000,
 	             bufSize,
 	             0,
 	             this	-> paCallback_o,
@@ -238,8 +248,9 @@ void	audioSink::audioOut	(int16_t *V, int32_t amount, int32_t rate) {
 	      return;
 	}
 }
+
 //
-//	scale up from 16 -> 48
+//	Scaling p from 16000 -> 48000 is simple, juast add zeros and filter
 void	audioSink::audioOut_16000	(int16_t *V, int32_t amount) {
 float	*buffer = (float *)alloca (6 * amount * sizeof (float));
 int32_t	i;
@@ -268,7 +279,9 @@ int32_t	available = _O_Buffer -> GetRingBufferWriteAvailable ();
 
 	_O_Buffer	-> putDataIntoBuffer (buffer, 2 * amount);
 }
-
+//
+//	Mapping from 24000 -> 48000 is simple, just ad one zero for each
+//	incoming sample and filter
 void	audioSink::audioOut_24000	(int16_t *V, int32_t amount) {
 float	*buffer = (float *)alloca (4 * amount * sizeof (float));
 int32_t	i;
@@ -345,29 +358,6 @@ int32_t	available = _O_Buffer -> GetRingBufferWriteAvailable ();
 	_O_Buffer	-> putDataIntoBuffer (buffer, 2 * amount);
 }
 //
-//	putSample output comes from the FM receiver
-
-int32_t	audioSink::putSample	(DSPCOMPLEX v) {
-	return putSamples (&v, 1);
-}
-
-int32_t	audioSink::putSamples		(DSPCOMPLEX *V, int32_t n) {
-float	*buffer = (float *)alloca (2 * n * sizeof (float));
-int32_t	i;
-int32_t	available = _O_Buffer -> GetRingBufferWriteAvailable ();
-
-	if (2 * n > available)
-	   n = (available / 2) & ~01;
-	for (i = 0; i < n; i ++) {
-	   buffer [2 * i] = real (V [i]);
-	   buffer [2 * i + 1] = imag (V [i]);
-	}
-
-	if (dumpFile != NULL)
-	   sf_writef_float (dumpFile, buffer, n);
-	_O_Buffer	-> putDataIntoBuffer (buffer, 2 * n);
-	return n;
-}
 
 int16_t	audioSink::numberofDevices	(void) {
 	return numofDevices;
@@ -411,7 +401,45 @@ void	audioSink::stopDumping	(void) {
 	dumpFile	= NULL;
 }
 
-int32_t	audioSink::getSelectedRate	(void) {
-	return CardRate;
+bool	audioSink::setupChannels (QComboBox *streamOutSelector) {
+uint16_t	ocnt	= 1;
+uint16_t	i;
+
+	for (i = 0; i <  numofDevices; i ++) {
+	   const QString so = 
+	             outputChannelwithRate (i, 48000);
+	   qDebug ("Investigating Device %d\n", i);
+
+	   if (so != QString ("")) {
+	      streamOutSelector -> insertItem (ocnt, so, QVariant (i));
+	      outTable [ocnt] = i;
+	      qDebug (" (output):item %d wordt stream %d (%s)\n", ocnt , i,
+	                      so. toLatin1 ().data ());
+	      ocnt ++;
+	   }
+	}
+
+	qDebug () << "added items to combobox";
+	return ocnt > 1;
 }
 
+void	audioSink::set_streamSelector (int idx) {
+int16_t	outputDevice;
+
+	if (idx == 0)
+	   return;
+
+	outputDevice = outTable [idx];
+	if (!isValidDevice (outputDevice)) {
+	   return;
+	}
+
+	stop	();
+	if (!selectDevice (outputDevice)) {
+	   fprintf (stderr, "error selecting device\n");
+	   selectDefaultDevice ();
+	   return;
+	}
+
+	qWarning () << "selected output device " << idx << outputDevice;
+}

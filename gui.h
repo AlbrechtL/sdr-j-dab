@@ -66,110 +66,93 @@ Q_OBJECT
 public:
 		RadioInterface		(QSettings	*,
 	                                 QWidget *parent = NULL);
-		~RadioInterface		();
+		~RadioInterface		(void);
 
 private:
-	int16_t		outputDevice;
-	void		dumpControlState	(QSettings *);
-	bool		sourceDumping;
-	SNDFILE		*dumpfilePointer;
-	bool		audioDumping;
-	SNDFILE		*audiofilePointer;
-	uint8_t		Concurrent;
-	int16_t		threshold;
-	DabParams	dabModeParameters;
-	void		setModeParameters	(int16_t);
-	int32_t		vfoFrequency;
-	int32_t		vfoOffset;
-	QSettings	*dabSettings;
+	int16_t			outputDevice;
+	void			dumpControlState	(QSettings *);
+	bool			sourceDumping;
+	SNDFILE			*dumpfilePointer;
+	bool			audioDumping;
+	SNDFILE			*audiofilePointer;
+	int16_t			threshold;
+	DabParams		dabModeParameters;
+	void			setModeParameters	(int16_t);
+	QSettings		*dabSettings;
 	QStringListModel	ensemble;
-	QStringList	Services;
+	QStringList		Services;
 #ifdef	HAVE_SPECTRUM
 	RingBuffer<DSPCOMPLEX>	*spectrumBuffer;
 	spectrumhandler		*spectrumHandler;
 #endif
-	char		isSynced;
-	int32_t		outRate;
-	int32_t		outBuffer;
-	int32_t		iqDisplaysize;
-	IQDisplay	*myIQDisplay;
+	uint8_t			isSynced;
+	int32_t			outRate;
+	int32_t			iqDisplaysize;
+	IQDisplay		*myIQDisplay;
 	RingBuffer<DSPCOMPLEX> *iqBuffer;
 
-	void		setupChannels	(QComboBox *, uint8_t);
-	uint8_t		dabBand;
-	uint8_t		theProcessor;
-	int32_t		ringbufferSize;
-	bool		running;
+	void			setupChannels		(QComboBox *, uint8_t);
+	uint8_t			dabBand;
+	bool			running;
 
-	QString		ensembleLabel;
-	virtualInput	*myRig;
-	int16_t		*outTable;
-	int16_t		numberofDevices;
+	QString			ensembleLabel;
+	virtualInput		*myRig;
 
-	void		setTuner		(int32_t);
-	QTimer		*displayTimer;
-	void		IncrementFrequency	(int32_t);
-
-	bool		setupSoundOut		(QComboBox *, audioSink *,
-	                                         int32_t, int16_t *);
-	void		resetSelector		(void);
-	int32_t		sampleCount;
-	bool		spectrumWaterfall;
-	ofdmProcessor	*the_ofdmProcessor;
-	ficHandler	*my_ficHandler;
-	mscHandler	*my_mscHandler;
-	audioSink	*our_audioSink;
-	int32_t		FreqIncrement;
-	int32_t		TunedFrequency;
-	bool		autoCorrector;
-	FILE		*mp2File;
-	FILE		*mp4File;
-	int16_t		scopeWidth;
-const	char		*get_programm_type_string (uint8_t);
-const	char		*get_programm_language_string (uint8_t);
-	QLabel		*pictureLabel;
-	QUdpSocket	DSCTy_59_socket;
+	void			setTuner		(int32_t);
+	QTimer			*displayTimer;
+	void			resetSelector		(void);
+	bool			spectrumWaterfall;
+	ofdmProcessor		*the_ofdmProcessor;
+	ficHandler		*my_ficHandler;
+	mscHandler		*my_mscHandler;
+	audioSink		*our_audioSink;
+	int32_t			TunedFrequency;
+	int32_t			vfoFrequency;
+	bool			autoCorrector;
+	FILE			*mp2File;
+	FILE			*mp4File;
+	int16_t			scopeWidth;
+	QLabel			*pictureLabel;
+	QUdpSocket		DSCTy_59_socket;
 private slots:
-	void		setStart	(void);
-	void		updateTimeDisplay	(void);
-	void		setStreamOutSelector	(int);
-	void		setScopeWidth		(int);
+	void			setStart	(void);
+	void			updateTimeDisplay	(void);
+	void			setScopeWidth		(int);
 
-	void		selectMode		(const QString &);
-	void		autoCorrector_on	(void);
+	void			selectMode		(const QString &);
+	void			autoCorrector_on	(void);
 
-	void		abortSystem		(int);
-	void		TerminateProcess	(void);
-	void		set_bandSelect		(QString);
-	void		set_channelSelect	(QString);
-	void		setDevice		(QString);
-	void		selectService		(QModelIndex);
-	void		set_dumping		(void);
-	void		set_mp2File		(void);
-	void		set_mp4File		(void);
-	void		set_audioDump		(void);
+	void			abortSystem		(int);
+	void			TerminateProcess	(void);
+	void			set_bandSelect		(QString);
+	void			set_channelSelect	(QString);
+	void			setDevice		(QString);
+	void			selectService		(QModelIndex);
+	void			set_dumping		(void);
+	void			set_mp2File		(void);
+	void			set_mp4File		(void);
+	void			set_audioDump		(void);
 public slots:
-	void	set_fineCorrectorDisplay	(int);
-	void	set_coarseCorrectorDisplay	(int);
-	void	set_avgTokenLengthDisplay	(int);
-	void	clearEnsemble		(void);
-	void	addtoEnsemble		(const QString &);
-	void	nameofEnsemble		(int, const QString &);
-	void	addEnsembleChar		(char, int);
-	void	channelData		(int, int, int, int, int, int, int);
-	void	show_successRate	(int);
-	void	show_ficRatio		(int);
-	void	show_snr		(int);
-	void	showIQ			(int);
-	void	setSynced		(char);
-	void	showLabel		(QString);
-	void	showMOT			(QByteArray, int);
-	void	send_datagram		(char *, int);
+	void			set_fineCorrectorDisplay	(int);
+	void			set_coarseCorrectorDisplay	(int);
+	void			set_avgTokenLengthDisplay	(int);
+	void			clearEnsemble		(void);
+	void			addtoEnsemble		(const QString &);
+	void			nameofEnsemble		(int, const QString &);
+	void			addEnsembleChar		(char, int);
+	void			show_successRate	(int);
+	void			show_ficRatio		(int);
+	void			show_snr		(int);
+	void			showIQ			(int);
+	void			setSynced		(char);
+	void			showLabel		(QString);
+	void			showMOT			(QByteArray, int);
+	void			send_datagram		(char *, int);
 #ifdef	HAVE_SPECTRUM
-	void	showSpectrum		(int);
-	void	set_spectrumHandler	(void);
+	void			showSpectrum		(int);
+	void			set_spectrumHandler	(void);
 private:
-	bool	spectrumisShown;
+	bool			spectrumisShown;
 #endif
 };
 

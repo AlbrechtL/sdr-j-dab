@@ -195,6 +195,7 @@ uint8_t	shiftRegister [9];
 
 void	dabConcurrent::setFiles (FILE *f1, FILE *f2) {
 	mp2File		= f1;
+	(void)f2;
 	if (dabModus == DAB)
 	   our_dabProcessor	-> setFile (f1);
 }

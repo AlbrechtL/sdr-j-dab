@@ -23,6 +23,7 @@
  *    along with SDR-J; if not, write to the Free Software
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include	<iostream>
 #include	<QSettings>
 #include	<QMessageBox>
 #include	<QFileDialog>
@@ -66,6 +67,10 @@
 
 #define		BAND_III	0100
 #define		L_BAND		0101
+static
+const char *get_programm_type_string (uint8_t type);
+static
+const char *get_programm_language_string (uint8_t language);
 /*
  *	We use the creation function merely to set up the
  *	user interface and make the connections between the
@@ -73,8 +78,9 @@
  *	is embedded in actions, initiated by gui buttons
  */
 	RadioInterface::RadioInterface (QSettings	*Si,
-	                                QWidget		*parent): QDialog (parent) {
-int16_t	i, k;
+	                                QWidget		*parent):
+	                                                   QDialog (parent) {
+int16_t	k;
 
 // 	the setup for the generated part of the ui
 	setupUi (this);
@@ -85,11 +91,9 @@ int16_t	i, k;
 //	The default:
 	myRig			= new virtualInput ();
 	running			= false;
-	
-	autoCorrector =
-	           dabSettings -> value ("autoCorrector", 1). toInt () == 1;
+	autoCorrector 		= true;
 
-	threshold	=
+	threshold		=
 	           dabSettings -> value ("threshold", 3). toInt ();
 //	Note that the generation of values to be displayed
 //	is in a separate thread, we need a buffer for communication
@@ -100,30 +104,17 @@ int16_t	i, k;
 	               setStyleSheet ("QLabel {background-color : red}");
 
 	iqBuffer		= new RingBuffer<DSPCOMPLEX> (2 * 1536);
-	iqDisplaysize	=
+	iqDisplaysize		=
 	               dabSettings -> value ("iqDisplaysize", 2 * 256). toInt ();
 	myIQDisplay		= new IQDisplay (iqDisplay, iqDisplaysize);
 //
-//	'Concurrent' indicates whether the mp4/mp2 processing part
-//	will be in a separate thread or not
-	Concurrent		= true;
 	TunedFrequency		= MHz (200);	// any value will do
-	outRate			= 48000;
-	outBuffer		=
-	                    dabSettings -> value ("outBuffer", 32768). toInt ();
+	outRate			= 48000;	// not used
 //
-//	Maybe we should move the outTable to the audioSink?
-	our_audioSink		= new audioSink		(outRate, outBuffer);
-	outTable		= new int16_t
-	                             [our_audioSink -> numberofDevices ()];
-	for (i = 0; i < our_audioSink -> numberofDevices (); i ++)
-	   outTable [i] = -1;
+//	our_audioSink will initialize the values for the
+//	streamOutSelector
+	our_audioSink		= new audioSink		(streamOutSelector);
 
-	if (!setupSoundOut (streamOutSelector,
-	                    our_audioSink, outRate, outTable)) {
-	   fprintf (stderr, "Cannot open any output device\n");
-	   exit (22);
-	}
 #ifdef	HAVE_SPECTRUM
 	spectrumBuffer		= new RingBuffer<DSPCOMPLEX> (2 * 32768);
 	spectrumHandler	= new spectrumhandler (this, dabSettings, spectrumBuffer);
@@ -141,9 +132,6 @@ int16_t	i, k;
 #endif
 #ifdef	HAVE_DABSTICK
 	deviceSelector	-> addItem ("dabstick");
-#endif
-#ifdef	HAVE_DONGLE
-	deviceSelector	-> addItem ("dongle");
 #endif
 #ifdef	HAVE_AIRSPY
 	deviceSelector	-> addItem ("airspy");
@@ -167,7 +155,7 @@ int16_t	i, k;
 	my_mscHandler		= new mscHandler	(this,
 	                                                 &dabModeParameters,
 	                                                 our_audioSink,
-	                                                 Concurrent);
+	                                                 true);
 	my_ficHandler		= new ficHandler	(this);
 //
 //	the default is:
@@ -204,8 +192,6 @@ int16_t	i, k;
 	              this, SLOT (TerminateProcess (void)));
 	connect (deviceSelector, SIGNAL (activated (const QString &)),
 	              this, SLOT (setDevice (const QString &)));
-	connect (streamOutSelector, SIGNAL (activated (int)),
-	              this, SLOT (setStreamOutSelector (int)));
 	connect (channelSelector, SIGNAL (activated (const QString &)),
 	              this, SLOT (set_channelSelect (const QString &)));
 	connect (bandSelector, SIGNAL (activated (const QString &)),
@@ -236,7 +222,6 @@ int16_t	i, k;
 	         SLOT (updateTimeDisplay (void)));
 //
 	setScopeWidth		(scopeSlider	 -> value ());
-	FreqIncrement		= 0;
 	sourceDumping		= false;
 	dumpfilePointer		= NULL;
 	audioDumping		= false;
@@ -244,6 +229,8 @@ int16_t	i, k;
 	sampleRateDisplay 	-> display (INPUT_RATE);
 //
 //	some settings may be influenced by the ini file
+//	the default device is the "no device", which happens to
+//	be a device
 	setDevice 		(deviceSelector 	-> currentText ());
 	QString h		=
 	           dabSettings -> value ("device", "no device"). toString ();
@@ -282,10 +269,7 @@ void	RadioInterface::dumpControlState (QSettings *s) {
 	s	-> setValue ("channel",
 	                      channelSelector -> currentText ());
 	s	-> setValue ("device", deviceSelector -> currentText ());
-	s	-> setValue ("Concurrent", Concurrent);
-	s	-> setValue ("vfoOffset", vfoOffset);
 	s	-> setValue ("iqDisplaysize", iqDisplaysize);
-	s	-> setValue ("autoCorrector", autoCorrector ? 1 : 0);
 }
 //
 //	On start, we ensure that the streams are stopped so
@@ -295,6 +279,7 @@ bool	r = 0;
 	if (running)		// only listen when not running yet
 	   return;
 //
+//	All modules are waiting for input, so let us give that to them.
 	r = myRig		-> restartReader ();
 	qDebug ("Starting %d\n", r);
 	if (!r) {
@@ -635,8 +620,8 @@ const char *table12 [] = {
 "entry 30 not used",
 "entry 31 not used"
 };
-
-const char *RadioInterface::get_programm_type_string (uint8_t type) {
+static
+const char *get_programm_type_string (uint8_t type) {
 	if (type > 0x40) {
 	   fprintf (stderr, "GUI: programmtype wrong (%d)\n", type);
 	   return (table12 [0]);
@@ -693,7 +678,8 @@ const char *table9 [] = {
 "Walloon"
 };
 
-const char *RadioInterface::get_programm_language_string (uint8_t language) {
+static
+const char *get_programm_language_string (uint8_t language) {
 	if (language > 43) {
 	   fprintf (stderr, "GUI: wrong language (%d)\n", language);
 	   return table9 [0];
@@ -702,9 +688,7 @@ const char *RadioInterface::get_programm_language_string (uint8_t language) {
 }
 
 void	RadioInterface::selectService (QModelIndex s) {
-uint8_t	coding;
 int16_t	type, language;
-bool	is_audio;
 
 QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 	switch (my_ficHandler -> kindofService (a)) {
@@ -718,15 +702,15 @@ QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 	        programName	-> setText (a);
 	        nameofLanguage	-> setText (get_programm_language_string (language));
 	        programType	-> setText (get_programm_type_string (type));
-	        channelData (d. subchId, 
-	                     d. uepFlag,
-	                     d. startAddr,
-	                     d. length,
-	                     d. protLevel,
-	                     d. bitRate,
-	                     d. ASCTy);
+		uepFlagDisplay		-> display (d. uepFlag);
+		startAddrDisplay	-> display (d. startAddr);
+		LengthDisplay		-> display (d. length);
+		protLevelDisplay	-> display (d. protLevel);
+		bitRateDisplay		-> display (d. bitRate);
+		ASCTyDisplay		-> display (d. ASCTy);
 	        break;
 	      }
+
 	   case PACKET_SERVICE:
 	      {  packetdata d;
 	          my_ficHandler	-> dataforDataService (a, &d);
@@ -753,14 +737,13 @@ QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 	               showLabel (QString ("Journaline"));
 	               break;
 	         }
-	         channelData (d. subchId, 
-	                      d. uepFlag,
-	                      d. startAddr,
-	                      d. length,
-	                      d. protLevel,
-	                      d. bitRate,
-	                      d. DSCTy);
-	        break;
+		 uepFlagDisplay		-> display (d. uepFlag);
+		 startAddrDisplay	-> display (d. startAddr);
+		 LengthDisplay		-> display (d. length);
+		 protLevelDisplay	-> display (d. protLevel);
+		 bitRateDisplay		-> display (d. bitRate);
+		 ASCTyDisplay		-> display (d. DSCTy);
+	         break;
 	      }
 	}
 }
@@ -833,6 +816,8 @@ void	RadioInterface::set_mp2File (void) {
 
 void	RadioInterface::set_mp4File (void) {
 
+	cout << "this button does not have effect\n";
+	return;
 	if (mp4File != NULL) {
 	   my_mscHandler	-> setFiles (mp2File, NULL);
 	   fclose (mp4File);
@@ -848,7 +833,6 @@ void	RadioInterface::set_mp4File (void) {
 	   audioDump	-> setText ("audioDump");
 	   return;
 	}
-
 	QString file = QFileDialog::getSaveFileName (this,
 	                                     tr ("open file ..."),
 	                                     QDir::homePath (),
@@ -899,23 +883,6 @@ SF_INFO	*sf_info	= (SF_INFO *)alloca (sizeof (SF_INFO));
 	audioDump		-> setText ("WRITING");
 	audioDumping		= true;
 	our_audioSink		-> startDumping (audiofilePointer);
-}
-
-
-void	RadioInterface::channelData (int subchId,
-	                             int uepFlag,
-	                             int startAddr,
-	                             int Length,
-	                             int protLevel,
-	                             int bitRate,
-	                             int ASCTy) {
-	(void)subchId;
-	uepFlagDisplay		-> display (uepFlag);
-	startAddrDisplay	-> display (startAddr);
-	LengthDisplay		-> display (Length);
-	protLevelDisplay	-> display (protLevel);
-	bitRateDisplay		-> display (bitRate);
-	ASCTyDisplay		-> display (ASCTy);
 }
 
 void	RadioInterface::show_successRate (int s) {
@@ -1055,21 +1022,6 @@ QString	file;
 	}
 	else
 #endif
-#ifdef	HAVE_DONGLE
-	if (s == "dongle") {
-	   myRig	= new miricsDongle (dabSettings, &success);
-	   if (!success) {
-	      delete myRig;
-	      QMessageBox::warning (this, tr ("sdr"),
-	                               tr ("miricsDongle: no luck\n"));
-	      myRig = new virtualInput ();
-	      resetSelector ();
-	   }
-	   else 
-	      set_channelSelect	(channelSelector -> currentText ());
-	}
-	else
-#endif
 	if (s == "file input (.raw)") {
 	   file		= QFileDialog::getOpenFileName (this,
 	                                                tr ("open file ..."),
@@ -1163,51 +1115,6 @@ void	RadioInterface::showSpectrum	(int32_t amount) {
 }
 #endif
 
-//	do not forget that ocnt starts with 1, due
-//	to Qt list conventions
-bool	RadioInterface::setupSoundOut (QComboBox	*streamOutSelector,
-	                               audioSink	*our_audioSink,
-	                               int32_t		cardRate,
-	                               int16_t		*table) {
-uint16_t	ocnt	= 1;
-uint16_t	i;
-
-	for (i = 0; i < our_audioSink -> numberofDevices (); i ++) {
-	   const QString so = 
-	             our_audioSink -> outputChannelwithRate (i, cardRate);
-	   qDebug ("Investigating Device %d\n", i);
-
-	   if (so != QString ("")) {
-	      streamOutSelector -> insertItem (ocnt, so, QVariant (i));
-	      table [ocnt] = i;
-	      qDebug (" (output):item %d wordt stream %d (%s)\n", ocnt , i,
-	                      so. toLatin1 ().data ());
-	      ocnt ++;
-	   }
-	}
-
-	qDebug () << "added items to combobox";
-	return ocnt > 1;
-}
-
-void	RadioInterface::setStreamOutSelector (int idx) {
-	if (idx == 0)
-	   return;
-
-	outputDevice = outTable [idx];
-	if (!our_audioSink -> isValidDevice (outputDevice)) 
-	   return;
-
-	our_audioSink	-> stop	();
-	if (!our_audioSink -> selectDevice (outputDevice)) {
-	   QMessageBox::warning (this, tr ("sdr"),
-	                               tr ("Selecting  output stream failed\n"));
-	   our_audioSink -> selectDefaultDevice ();
-	   return;
-	}
-
-	qWarning () << "selected output device " << idx << outputDevice;
-}
 //
 //	This is a copy of the clearEnsemble, with as difference
 //	that the autoCorrector is ON. We then need clean settings
@@ -1267,7 +1174,7 @@ uint8_t	Mode	= s. toInt ();
 	my_mscHandler		= new mscHandler	(this,
 	                                                 &dabModeParameters,
 	                                                 our_audioSink,
-	                                                 Concurrent);
+	                                                 true);
 	delete the_ofdmProcessor;
 	the_ofdmProcessor	= new ofdmProcessor (myRig,
 	                                             &dabModeParameters,
@@ -1378,4 +1285,3 @@ void	RadioInterface::set_spectrumHandler (void) {
 	   spectrumHandler -> hide ();
 }
 #endif
-

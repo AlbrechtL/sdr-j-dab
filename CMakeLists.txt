@@ -137,6 +137,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./includes/backend/dab-processor.h
 	     ./includes/backend/dab-virtual.h
 	     ./includes/backend/audio/rscodec.h 
+	     ./includes/backend/rs-decoder.h 
 	     ./includes/backend/audio/mp4processor.h 
 	     ./includes/backend/audio/mp2processor.h 
 	     ./includes/backend/data/ip-datahandler.h 
@@ -173,6 +174,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./src/backend/deconvolve.cpp
 	     ./src/backend/fib-processor.cpp
 	     ./src/backend/audio/rscodec.cpp 
+	     ./src/backend/rs-decoder.cpp 
 	     ./src/backend/audio/mp4processor.cpp 
 	     ./src/backend/audio/mp2processor.cpp 
 	     ./src/backend/firecode-checker.cpp

@@ -70,7 +70,12 @@ uint16_t	genpoly		= 0x1021;
 
 	mp4Processor::mp4Processor (RadioInterface *mr,
 	                            audioSink *as,
-	                            int16_t bitRate):my_padHandler (mr) {
+	                            int16_t bitRate):my_padHandler (mr)
+	                                            ,new_rsDecoder (8,
+	                                                            0435,
+	                                                            0,
+	                                                            1,
+	                                                            10) {
 int16_t	i;
 
 	myRadioInterface	= mr;
@@ -152,7 +157,7 @@ uint8_t		rsOut	[110];
 uint8_t		dacRate;
 uint8_t		sbrFlag;
 uint8_t		aacChannelMode;
-uint8_t		psFlag;
+//uint8_t	psFlag;
 uint16_t	mpegSurround;
 int32_t		outSamples	= 0;
 int32_t		tmp		= 0;
@@ -165,14 +170,15 @@ int32_t		tmp		= 0;
 	   int16_t ler	= 0;
 	   for (k = 0; k < 120; k ++) 
 	      rsIn [k] = frameBytes [(base + j + k * RSDims) % (RSDims * 120)];
-	   ler = rsDecoder. dec (rsIn, rsOut, 135);
+//	   ler = my_rsDecoder. dec (rsIn, rsOut, 135);
+	   ler = new_rsDecoder. dec (rsIn, rsOut, 135);
 	   if (ler > 0) {
-//	      fprintf (stderr, "corrected %d errors\n", ler);
+	      fprintf (stderr, "corrected %d errors\n", ler);
 	      nErrors += ler;
 	   }
 	   else
 	   if (ler < 0) {
-//	      fprintf (stderr, "unrecoverable errors\n");
+	      fprintf (stderr, "unrecoverable errors\n");
 	      return false;
 	   }
 	   for (k = 0; k < 110; k ++) 
@@ -185,7 +191,7 @@ int32_t		tmp		= 0;
 	dacRate		= (outVector [2] >> 6) & 01;	// bit 17
 	sbrFlag		= (outVector [2] >> 5) & 01;	// bit 18
 	aacChannelMode	= (outVector [2] >> 4) & 01;	// bit 19
-	psFlag		= (outVector [2] >> 3) & 01;	// bit 20
+//	psFlag		= (outVector [2] >> 3) & 01;	// bit 20
 	mpegSurround	= (outVector [2] & 07);		// bits 21 .. 23
 
 	switch (2 * dacRate + sbrFlag) {
@@ -282,7 +288,7 @@ int32_t		tmp		= 0;
 	   }
 	   else {
 	      au_errors ++;
-//	      fprintf (stderr, "CRC failure with dab+ frame\n");
+	      fprintf (stderr, "CRC failure with dab+ frame\n");
 	   }
 	}
 //	fprintf (stderr, "%d samples good for %d nsec of music\n",

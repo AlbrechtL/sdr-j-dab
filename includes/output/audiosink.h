@@ -27,6 +27,8 @@
 
 #ifndef __AUDIO_SINK
 #define	__AUDIO_SINK
+#include	<QObject>
+#include	<QComboBox>
 #include	<QString>
 #include	"dab-constants.h"
 #include	<portaudio.h>
@@ -38,17 +40,19 @@
 #define		HIGHLATENCY	0200
 #define		VERYHIGHLATENCY	0300
 
-class	audioSink  {
+class	audioSink: public QObject {
+Q_OBJECT
 public:
-			audioSink		(int32_t, int32_t);
+			audioSink		(QComboBox *);
 			~audioSink		(void);
+public slots:
+	void		set_streamSelector	(int);
+public:
 	int16_t		numberofDevices		(void);
 	QString		outputChannelwithRate	(int16_t, int32_t);
 	void		stop			(void);
 	void		restart			(void);
 	void		audioOut		(int16_t *, int32_t, int32_t);
-	int32_t		putSample		(DSPCOMPLEX);
-	int32_t		putSamples		(DSPCOMPLEX *, int32_t);
 	int16_t		invalidDevice		(void);
 	bool		isValidDevice		(int16_t);
 
@@ -57,7 +61,6 @@ public:
 	bool		selectDevice		(int16_t);
 	void		startDumping		(SNDFILE *);
 	void		stopDumping		(void);
-	int32_t		getSelectedRate		(void);
 private:
 	bool		OutputrateIsSupported	(int16_t, int32_t);
 	void		audioOut_16000		(int16_t *, int32_t);
@@ -67,7 +70,6 @@ private:
 	LowPassFIR	*f_16000;
 	LowPassFIR	*f_24000;
 	LowPassFIR	*f_32000;
-	int32_t		CardRate;
 	int32_t		size;
 	uint8_t		Latency;
 	bool		portAudio;
@@ -77,8 +79,11 @@ private:
 	int16_t		bufSize;
 	PaStream	*ostream;
 	SNDFILE		*dumpFile;
+	bool		setupChannels		(QComboBox *);
 	RingBuffer<float>	*_O_Buffer;
 	PaStreamParameters	outputParameters;
+	int16_t		*outTable;
+	QComboBox	*streamSelector;
 protected:
 static	int		paCallback_o	(const void	*input,
 	                                 void		*output,

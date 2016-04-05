@@ -51,7 +51,7 @@ int16_t pinit, p1, p2, p3, p4, p5, p6, p7, p8;
 //        d_q = 1 << 8;
 //        d_p = 0435;
 	pm = d_p - d_q;
-
+	(void)pm;
 	pinit = p2 = p3 = p4 = p5 = p6 = p7 = p8 = 0;
 	p1 = 1;
 	

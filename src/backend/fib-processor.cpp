@@ -441,6 +441,7 @@ uint16_t	CAOrg	= getBits (d, used * 8 + 40, 16);
 
 serviceComponent *packetComp = find_packetComponent (SCId);
 
+	(void)CAOrgflag;
 	used += 56 / 8;	
 	if (packetComp == NULL)		// no serviceComponent
 	   return used;
