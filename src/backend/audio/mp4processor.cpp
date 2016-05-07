@@ -70,12 +70,8 @@ uint16_t	genpoly		= 0x1021;
 
 	mp4Processor::mp4Processor (RadioInterface *mr,
 	                            audioSink *as,
-	                            int16_t bitRate):my_padHandler (mr)
-	                                            ,new_rsDecoder (8,
-	                                                            0435,
-	                                                            0,
-	                                                            1,
-	                                                            10) {
+	                            int16_t bitRate):my_padHandler (mr),
+	                                  my_rsDecoder (8, 0435, 0, 1, 10) {
 int16_t	i;
 
 	myRadioInterface	= mr;
@@ -153,6 +149,7 @@ uint8_t		num_aus;
 int16_t		i, j, k;
 int16_t		nErrors	= 0;
 uint8_t		rsIn	[120];
+uint8_t		rsOut_d	[110];
 uint8_t		rsOut	[110];
 uint8_t		dacRate;
 uint8_t		sbrFlag;
@@ -170,17 +167,14 @@ int32_t		tmp		= 0;
 	   int16_t ler	= 0;
 	   for (k = 0; k < 120; k ++) 
 	      rsIn [k] = frameBytes [(base + j + k * RSDims) % (RSDims * 120)];
-//	   ler = my_rsDecoder. dec (rsIn, rsOut, 135);
-	   ler = new_rsDecoder. dec (rsIn, rsOut, 135);
+//
+	   ler = my_rsDecoder. dec (rsIn, rsOut, 135);
 	   if (ler > 0) {
-	      fprintf (stderr, "corrected %d errors\n", ler);
+//	      fprintf (stderr, "corrected %d errors\n", ler);
 	      nErrors += ler;
 	   }
-	   else
-	   if (ler < 0) {
-	      fprintf (stderr, "unrecoverable errors\n");
+	   if (ler < 0)
 	      return false;
-	   }
 	   for (k = 0; k < 110; k ++) 
 	      outVector [j + k * RSDims] = rsOut [k];
 	}
@@ -288,7 +282,7 @@ int32_t		tmp		= 0;
 	   }
 	   else {
 	      au_errors ++;
-	      fprintf (stderr, "CRC failure with dab+ frame\n");
+	      fprintf (stderr, "CRC failure with dab+ frame should not happen\n");
 	   }
 	}
 //	fprintf (stderr, "%d samples good for %d nsec of music\n",

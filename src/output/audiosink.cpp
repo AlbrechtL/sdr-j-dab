@@ -288,8 +288,8 @@ int32_t	i;
 int32_t	available = _O_Buffer -> GetRingBufferWriteAvailable ();
 
 	amount	= 2 * amount;
-	if (2 * amount > available)
-	   amount = (available / 2) & ~01;
+	if (amount > available)
+	   amount = (available) & ~01;
 	for (i = 0; i < amount / 2; i ++) {
 	   DSPCOMPLEX help = DSPCOMPLEX (float (V [2 * i]) / 32767.0,
 	                                 float (V [2 * i + 1]) / 32767.0);
@@ -302,7 +302,7 @@ int32_t	available = _O_Buffer -> GetRingBufferWriteAvailable ();
 	}
 
 	if (dumpFile != NULL)
-	   sf_writef_float (dumpFile, buffer, amount);
+	   sf_writef_float (dumpFile, buffer, 2 * amount);
 
 	_O_Buffer	-> putDataIntoBuffer (buffer, 2 * amount);
 }

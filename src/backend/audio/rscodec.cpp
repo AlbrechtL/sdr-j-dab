@@ -48,7 +48,7 @@ int16_t i, pm;
 int16_t pinit, p1, p2, p3, p4, p5, p6, p7, p8;
 
 //	d_m = 8;
-//        d_q = 1 << 8;
+//	d_q = 1 << 8;
 //        d_p = 0435;
 	pm = d_p - d_q;
 	(void)pm;
@@ -105,8 +105,8 @@ int16_t i;
 int16_t tmp_g, tmp_g2;
 int16_t	k;
 
-// g has degree 2t, g(0), g(1),..., g(2t-1) are its coefficients,
-// g (2t) = 1 is not included
+//	g has degree 2t, g(0), g(1),..., g(2t-1) are its coefficients,
+//	g (2t) = 1 is not included
 
 	d_g [NUM_PARITY - 1] = start_j + 1; // power representation
 	for (k = 1; k < NUM_PARITY; k++){
@@ -141,12 +141,13 @@ int16_t	ret;
 	return ret;
 }
 //	calculate the syndrome with Horner
-//	syndrone [0] is the highest degree coefficient,
-//	syndrone [2t-1] is the lowest degree coefficient
+//	syndrome [0] is the highest degree coefficient,
+//	syndrome [2t-1] is the lowest degree coefficient
 //	i.e. S(X) = syndrome [0]X ^ (2t-1) + syndrome [1]X ^ (2t-2)+...
 //	+ syndrome [2t-1]
 int16_t	rscodec::dec_poly (const uint16_t *r, uint16_t *d) {
 int16_t i,j;
+uint8_t	errors	= 0;
 
 	for (i = 0; i < NUM_PARITY; i++) {
 	   uint16_t sum = r [0];
@@ -157,18 +158,26 @@ int16_t i,j;
 	                      multiply_poly (sum, alpha_i));
 
 	   syndrome [NUM_PARITY - i - 1] = sum;
+	   errors += (sum == 0) ? 0 : 1;
 	}
-// Euclidean algorithm
+
+	if (errors == 0)		// no errors
+	   return 0;
+
+//	Euclidean algorithm
 // step 1: initialize
 // index to 'top', index to 'bottom' is !top
 	int16_t top	 = 0;
 	int16_t deg [2] = {NUM_PARITY, NUM_PARITY - 1}; // top and bottom relaxed degree
 //	d_euc [top]. clear ();
 //	d_euc [!top].clear ();
+
 	memset (d_euc [top], 0, (NUM_PARITY + 2) * sizeof (d_euc [0][0]));
 	memset (d_euc[!top], 0, (NUM_PARITY + 2) * sizeof (d_euc [0][0]));
+
 	d_euc [top][0] = 1;
 	d_euc [top][NUM_PARITY + 1] = 1;
+
 	//d_euc [!top].set_subvector (0, syndrome);
 	memcpy (d_euc [!top], syndrome, NUM_PARITY * sizeof (syndrome [0]));
 
@@ -191,7 +200,7 @@ int16_t i,j;
 	      }
 
 	      for (; j <= deg [!top]; j++) {
-	         d_euc [!top][j] = multiply_poly (mu[top], d_euc[!top][j]);
+	         d_euc [!top][j] = multiply_poly (mu [top], d_euc [!top][j]);
 	      }
 
 	      for (j = NUM_PARITY + 1; j > deg[!top]; j--) {
@@ -206,18 +215,19 @@ int16_t i,j;
 	      }
 	   }
 // step 2.d
-//	d_euc[!top].shift_left(0);
+//	d_euc[!top]. shift_left(0);
 	   memmove (d_euc [!top], d_euc[!top] + 1,
 	            (NUM_PARITY + 1) * sizeof (d_euc[0][0]));
 	   d_euc [!top][NUM_PARITY + 1] = 0;
 	   deg [!top]--;
 	}
-// step 3: output, evaluator=d_euc[!top][0..deg[!top]],
-//	locator=d_euc[top][2t+1..deg[top]+1],
+
+// step 3: output, evaluator = d_euc[!top][0..deg[!top]],
+//	locator = d_euc [top][2t+1..deg[top]+1],
 //	highest degree coefficient first
 //	if deg [top] > deg [!top], then error correctable;
 //	otherwise uncorrectable error pattern
-	if (deg [top] <= deg[!top]){
+	if (deg [top] <= deg [!top]){
 	   // d = r.left (MESSAGE_LRNGTH);	// no correction attempt if
 	   // uncorrectable error pattern
 	   memcpy (d, r, MESSAGE_LENGTH * sizeof (r [0]));
@@ -242,8 +252,8 @@ int16_t i,j;
 	   x  = inverse_power (i + 1); // alpha^(-i). can be optimized
 	   x2 = power2poly (multiply_power (x, x)); // x^2
 	   x  = power2poly (x);
-// calculate locator_even(x^2)
-// calculate locator_odd(x^2)
+//	calculate locator_even (x^2)
+//	calculate locator_odd (x^2)
 	   sig_high = d_euc [top][NUM_PARITY + 1];
 	   sig_low  = d_euc [top][NUM_PARITY];
 	   for (j = NUM_PARITY - 1; j > deg [top]; j -= 2)
@@ -254,7 +264,7 @@ int16_t i,j;
 	      sig_low = add_poly (multiply_poly (sig_low, x2),
 	                          d_euc [top][j]);
 
-// the last j is deg[top]+2, then sig_low is sig_odd
+//	the last j is deg [top] + 2, then sig_low is sig_odd
 	   if (j == deg [top]){
 	      sig_odd = sig_low;
 	      sig_even = sig_high;
@@ -269,10 +279,10 @@ int16_t i,j;
 	   else {	// located an error
 	      if (sig_odd == 0){	// non-correctable error
 	         //			d = r.left (MESSAGE_LENGTH);
-	         memcpy (d, r, MESSAGE_LENGTH * sizeof (r[0]));
+	         memcpy (d, r, MESSAGE_LENGTH * sizeof (r [0]));
 	         return -1;
 	      }
-// calculate error evaluator
+//	calculate error evaluator
 	      omega = d_euc [!top][0];
 	      for (j = 1; j <= deg [!top]; j++)
 	         omega = add_poly (multiply_poly (omega, x),
@@ -281,10 +291,10 @@ int16_t i,j;
 // error value. Forney
 	      if (d_j >= 1){
 	         y = multiply_poly (divide_poly (omega, sig_odd),
-	                            pow_poly (x, d_j - 1));
+	                                          pow_poly (x, d_j - 1));
 	      } else {
 	         y = divide_poly (divide_poly (omega, sig_odd),
-	                          pow_poly (x, 1 - d_j));
+	                                          pow_poly (x, 1 - d_j));
 	      }
 // error correction
 	      d [CODE_LENGTH - 1 - i] = add_poly (r [CODE_LENGTH - 1 - i],  y);
@@ -353,10 +363,6 @@ int16_t	rscodec::power2poly (int16_t a) {
 
 int16_t	rscodec::poly2power (int16_t a) {
 	return glog [a];
-}
-
-int16_t	rscodec::inverse_poly	(int16_t a) {
-	return divide_poly (1, a);
 }
 
 int16_t	rscodec::inverse_power	(int16_t a) {

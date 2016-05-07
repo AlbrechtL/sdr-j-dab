@@ -66,6 +66,12 @@ struct protectionProfile {
 	{96,	3,	6, 12, 51, 3,	16, 9, 6, 10},
 	{96,	2,	6, 10, 53, 3,	22, 12, 9, 12},
 	{96,	1,	6, 13, 50, 3,	24, 18, 13, 19},
+//
+//	Thanks to Kalle Riis, who found that the "112" was missing
+	{112,	5,	14, 17, 50, 3,	5, 4, 2, 5},
+	{112,	4,	11, 21, 49, 3,	9, 6, 4, 8},
+	{112,	3,	11, 23, 47, 3,	16, 8, 6, 9},
+	{112,	2,	11, 21, 49, 3,	23, 12, 9, 14},
 
 	{128,	5,	12, 19, 62, 3,	5, 3, 2, 4},
 	{128,	4,	11, 21, 61, 3,	11, 6, 5, 7},
@@ -125,6 +131,14 @@ int16_t	i;
 	return -1;
 }
 
+/**
+  *	the table is based on chapter 11 of the DAB standard.
+  *
+  *	\brief uep_deconvolve
+  *
+  *	The bitRate and the protectionLevel determine the 
+  *	depuncturing scheme.
+  */
 	uep_deconvolve::uep_deconvolve (int16_t bitRate,
 	                                int16_t protLevel):viterbi (24 * bitRate) {
 int16_t	index;
@@ -165,73 +179,68 @@ int32_t	viterbiCounter	= 0;
 //	according to the standard we process the logical frame
 //	with a pair of tuples
 //	(L1, PI1), (L2, PI2), (L3, PI3), (L4, PI4)
-//
+
+///	clear the bits in the viterbiBlock,
+///	only the non-punctured ones are set
 	memset (viterbiBlock, 0, (outSize * 4 + 24) * sizeof (int16_t)); 
 	for (i = 0; i < L1; i ++) {
 	   for (j = 0; j < 128; j ++) {
-	      if (PI1 [j % 32] == 1)
-//	         viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	      else
-//	         viterbiBlock [viterbiCounter ++]  = 0;	
-	      if (PI1 [j % 32] == 1)
+	      if (PI1 [j % 32] == 1) {
 	         viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	      }
 	      viterbiCounter ++;
 	   }
 	}
 
 	for (i = 0; i < L2; i ++) {
 	   for (j = 0; j < 128; j ++) {
-//	      if (PI2 [j % 32] == 1)
-//	         viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	      else
-//	         viterbiBlock [viterbiCounter++] = 0;	
-	      if (PI2 [j % 32] == 1)
+	      if (PI2 [j % 32] == 1) {
 	         viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	      }
 	      viterbiCounter ++;
 	   }
 	}
 
 	for (i = 0; i < L3; i ++) {
 	   for (j = 0; j < 128; j ++) {
-//	      if (PI3 [j % 32] == 1)
-//	         viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	      else
-//	         viterbiBlock [viterbiCounter ++] = 0;	
-	      if (PI3 [j % 32] == 1)
+	      if (PI3 [j % 32] == 1) {
 	         viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	      }
 	      viterbiCounter ++;	
 	   }
 	}
 
 	for (i = 0; i < L4; i ++) {
 	   for (j = 0; j < 128; j ++) {
-//	      if (PI4 [j % 32] == 1)
-//	         viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	      else
-//	         viterbiBlock [viterbiCounter ++] = 0;	
-	      if (PI4 [j % 32] == 1)
+	      if (PI4 [j % 32] == 1) {
 	         viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	      }
 	      viterbiCounter ++;	
 	   }
 	}
 
-//	we had a final block of 24 bits  with puncturing according to PI_X
-//	This block constitues the 6 * 4 bits of the register itself.
+/**
+  *	we have a final block of 24 bits  with puncturing according to PI_X
+  *	This block constitues the 6 * 4 bits of the register itself.
+  */
 	for (i = 0; i < 24; i ++) {
-//	   if (PI_X [i] == 1)  
-//	      viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	   else
-//	      viterbiBlock [viterbiCounter ++] = 0;
-	   if (PI_X [i] == 1)  
+	   if (PI_X [i] == 1)  {
 	      viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	   }
 	   viterbiCounter ++;
 	}
+//
+///	The actual deconvolution is done by the viterbi decoder
+
 	viterbi::deconvolve (viterbiBlock, outBuffer);
 	return true;
 }
 
-//
-//
+/**
+  *	\brief eep_deconvolve
+  *	equal error protection, bitRate and protLevel
+  *	define the puncturing table
+  */
 	eep_deconvolve::eep_deconvolve (int16_t bitRate,
 	                                int16_t protLevel):viterbi (24 * bitRate) {
 	this	-> bitRate = bitRate;
@@ -328,36 +337,27 @@ int32_t	viterbiCounter	= 0;
 //
 	for (i = 0; i < L1; i ++) {
 	   for (j = 0; j < 128; j ++) {
-//	      if (PI1 [j % 32] == 1)
-//	         viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	      else
-//	         viterbiBlock [viterbiCounter ++] = 0;	
-	      if (PI1 [j % 32] == 1)
+	      if (PI1 [j % 32] == 1) {
 	         viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	      }
 	      viterbiCounter ++;	
 	   }
 	}
 
 	for (i = 0; i < L2; i ++) {
 	   for (j = 0; j < 128; j ++) {
-//	      if (PI2 [j % 32] == 1)
-//	         viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	      else
-//	         viterbiBlock [viterbiCounter ++] = 0;	
-	      if (PI2 [j % 32] == 1)
+	      if (PI2 [j % 32] == 1) {
 	         viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	      }
 	      viterbiCounter ++;	
 	   }
 	}
 //	we had a final block of 24 bits  with puncturing according to PI_X
 //	This block constitues the 6 * 4 bits of the register itself.
 	for (i = 0; i < 24; i ++) {
-//	   if (PI_X [i] == 1)  
-//	      viterbiBlock [viterbiCounter ++] = v [inputCounter ++];
-//	   else
-//	      viterbiBlock [viterbiCounter ++] = 0;
-	   if (PI_X [i] == 1)  
+	   if (PI_X [i] == 1) {
 	      viterbiBlock [viterbiCounter] = v [inputCounter ++];
+	   }
 	   viterbiCounter ++;
 	}
 

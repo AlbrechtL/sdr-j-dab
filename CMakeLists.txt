@@ -35,7 +35,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	set(SPECTRUM true)
 
 #	add_definitions (-DSIMPLE_SYNCHRONIZATION)
-	add_definitions (-DFULL_CORRELATION)
+#	add_definitions (-DFULL_CORRELATION)
 	add_definitions (-DMOT_BASICS__) 	# use at your own risk
 	add_definitions (-DMSC_DATA__)		# use at your own risk
 ########################################################################
@@ -136,8 +136,8 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./includes/backend/dab-concurrent.h
 	     ./includes/backend/dab-processor.h
 	     ./includes/backend/dab-virtual.h
-	     ./includes/backend/audio/rscodec.h 
-	     ./includes/backend/rs-decoder.h 
+	     ./includes/backend/galois.h
+	     ./includes/backend/reed-solomon.h
 	     ./includes/backend/audio/mp4processor.h 
 	     ./includes/backend/audio/mp2processor.h 
 	     ./includes/backend/data/ip-datahandler.h 
@@ -173,8 +173,8 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./src/backend/msc-handler.cpp
 	     ./src/backend/deconvolve.cpp
 	     ./src/backend/fib-processor.cpp
-	     ./src/backend/audio/rscodec.cpp 
-	     ./src/backend/rs-decoder.cpp 
+	     ./src/backend/galois.cpp
+	     ./src/backend/reed-solomon.cpp 
 	     ./src/backend/audio/mp4processor.cpp 
 	     ./src/backend/audio/mp2processor.cpp 
 	     ./src/backend/firecode-checker.cpp
@@ -209,6 +209,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./includes/backend/fic-handler.h
 	     ./includes/backend/fib-processor.h
 	     ./includes/backend/audio/mp2processor.h
+	     ./includes/output/audiosink.h
 	     ./includes/backend/audio/mp4processor.h
 	     ./includes/backend/data/virtual-datahandler.h
 	     ./includes/backend/data/pad-handler.h

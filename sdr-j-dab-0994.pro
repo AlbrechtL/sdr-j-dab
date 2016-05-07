@@ -8,12 +8,12 @@ TEMPLATE	= app
 TARGET		= sdr-j-dab-0.994
 QT		+= widgets network
 CONFIG		+= console
-#QMAKE_CFLAGS	+= -flto  -ffast-math
-#QMAKE_CXXFLAGS	+= -flto  -ffast-math
-#QMAKE_LFLAGS	+= -flto 
-QMAKE_CFLAGS	+= -ffast-math -g
-QMAKE_CXXFLAGS	+= -ffast-math -g
-QMAKE_LFLAGS	+= -g
+QMAKE_CFLAGS	+= -flto  -ffast-math
+QMAKE_CXXFLAGS	+= -flto  -ffast-math
+QMAKE_LFLAGS	+= -flto 
+#QMAKE_CFLAGS	+= -ffast-math -g
+#QMAKE_CXXFLAGS	+= -ffast-math -g
+#QMAKE_LFLAGS	+= -g
 #CONFIG		+= NO_SSE_SUPPORT 
 #DEFINES	+= SIMPLE_SYNCHRONIZATION
 #DEFINES	+= FULL_CORRELATION
@@ -67,6 +67,8 @@ HEADERS += ./gui.h \
 	   ./includes/backend/fib-processor.h  \
 	   ./includes/backend/audio/rscodec.h \
 	   ./includes/backend/rs-decoder.h \
+	   ./includes/backend/galois.h \
+	   ./includes/backend/reed-solomon.h \
 	   ./includes/backend/audio/mp4processor.h \
 	   ./includes/backend/audio/mp2processor.h \
 	   ./includes/backend/charsets.h \
@@ -111,6 +113,8 @@ SOURCES += ./main.cpp \
 	   ./src/backend/fib-processor.cpp  \
 	   ./src/backend/audio/rscodec.cpp \
 	   ./src/backend/rs-decoder.cpp \
+	   ./src/backend/galois.cpp \
+	   ./src/backend/reed-solomon.cpp \
 	   ./src/backend/audio/mp4processor.cpp \
 	   ./src/backend/audio/mp2processor.cpp \
 	   ./src/backend/charsets.cpp \
