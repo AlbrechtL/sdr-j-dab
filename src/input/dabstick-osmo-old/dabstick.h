@@ -35,7 +35,7 @@
 #include	"fir-filters.h"
 #include	"virtual-input.h"
 #include	"dongleselect.h"
-#include	"ui_dabstick-widget-osmo.h"
+#include	"ui_dabstick-widget.h"
 class	dll_driver;
 //
 //	create typedefs for the library functions
@@ -50,6 +50,7 @@ typedef	int (*  pfnrtlsdr_get_tuner_gains) (rtlsdr_dev_t *, int *);
 typedef	int (*  pfnrtlsdr_set_tuner_gain_mode) (rtlsdr_dev_t *, int);
 typedef	int (*  pfnrtlsdr_set_sample_rate) (rtlsdr_dev_t *, uint32_t);
 typedef	int (*  pfnrtlsdr_get_sample_rate) (rtlsdr_dev_t *);
+typedef	int (*  pfnrtlsdr_set_agc_mode) (rtlsdr_dev_t *, int);
 typedef	int (*  pfnrtlsdr_set_tuner_gain) (rtlsdr_dev_t *, int);
 typedef	int (*  pfnrtlsdr_get_tuner_gain) (rtlsdr_dev_t *);
 typedef int (*  pfnrtlsdr_reset_buffer) (rtlsdr_dev_t *);
@@ -67,7 +68,7 @@ typedef	char *(* pfnrtlsdr_get_device_name)(int);
 //	This class is a simple wrapper around the
 //	rtlsdr library that is read is as dll
 //	It does not do any processing
-class	dabStick: public virtualInput, public Ui_dabstickWidget_osmo {
+class	dabStick: public virtualInput, public Ui_dabstickWidget {
 Q_OBJECT
 public:
 			dabStick	(QSettings *, bool *);
@@ -102,7 +103,8 @@ private:
 	int32_t		lastFrequency;
 	bool		libraryLoaded;
 	bool		open;
-	int		*gains;
+    int		*gains;
+    int     CurrentManualGain;
 	int16_t		gainsCount;
 //	here we need to load functions from the dll
 	bool		load_rtlFunctions	(void);
@@ -115,6 +117,7 @@ private:
 	pfnrtlsdr_set_tuner_gain_mode rtlsdr_set_tuner_gain_mode;
 	pfnrtlsdr_set_sample_rate rtlsdr_set_sample_rate;
 	pfnrtlsdr_get_sample_rate rtlsdr_get_sample_rate;
+	pfnrtlsdr_set_agc_mode rtlsdr_set_agc_mode;
 	pfnrtlsdr_set_tuner_gain rtlsdr_set_tuner_gain;
 	pfnrtlsdr_get_tuner_gain rtlsdr_get_tuner_gain;
 	pfnrtlsdr_reset_buffer rtlsdr_reset_buffer;
@@ -124,10 +127,10 @@ private:
 	pfnrtlsdr_set_freq_correction rtlsdr_set_freq_correction;
 	pfnrtlsdr_get_device_name rtlsdr_get_device_name;
 private slots:
-	void		setExternalGain		(const QString &);
-	void		set_autogain		(const QString &);
+	void		setExternalGain		(int);
 	void		set_fCorrection		(int);
 	void		set_KhzOffset		(int);
+	void		setAgc			(int);
 
 };
 #endif

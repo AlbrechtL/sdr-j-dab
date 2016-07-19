@@ -111,8 +111,9 @@ void		processSegment	(int16_t	transportId,
 	                         bool		lastFlag);
 	void	my_help		(void);
 private:
-	motElement table [16];
-	int16_t	ordernumber;
+	motElement	table [16];
+	motElement	*oldSlide;
+	int16_t		ordernumber;
 	MOT_directory	*theDirectory;
 	
 	motElement	*getHandle	(uint16_t transportId);
