@@ -145,11 +145,9 @@ SOURCES += ./main.cpp \
 #	listed, just comment the line out.
 unix {
 CONFIG		+= dabstick_osmo
-#CONFIG		+= dabstick_new
 CONFIG		+= sdrplay
 CONFIG		+= rtl_tcp
 CONFIG		+= airspy
-#CONFIG		+= airspy-exp
 CONFIG		+= spectrum
 DEFINES		+= MOT_BASICS__ 	# use at your own risk
 DEFINES		+= MSC_DATA__		# use at your own risk

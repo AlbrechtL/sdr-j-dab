@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>dab spectrum</string>
   </property>
   <widget class="QwtPlot" name="dabScope">
    <property name="geometry">
