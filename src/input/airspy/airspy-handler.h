@@ -95,7 +95,6 @@ public:
 	int16_t		bitDepth (void);
 //
 	bool		status (void);
-	int		setExternalRate (int nsr);
 	int32_t		getRate (void);
 	int32_t		getSamples (DSPCOMPLEX  *V,
 	                         int32_t size, uint8_t M);
@@ -114,6 +113,7 @@ private:
 //	The functions to be extracted from the dll/.so file
 	pfn_airspy_init		   my_airspy_init;
 	pfn_airspy_exit		   my_airspy_exit;
+	pfn_airspy_error_name	   my_airspy_error_name;
 	pfn_airspy_open		   my_airspy_open;
 	pfn_airspy_close	   my_airspy_close;
 	pfn_airspy_get_samplerates my_airspy_get_samplerates;
@@ -130,7 +130,6 @@ private:
 	pfn_airspy_set_lna_agc	   my_airspy_set_lna_agc;
 	pfn_airspy_set_mixer_agc   my_airspy_set_mixer_agc;
 	pfn_airspy_set_rf_bias	   my_airspy_set_rf_bias;
-	pfn_airspy_error_name	   my_airspy_error_name;
 	pfn_airspy_board_id_read   my_airspy_board_id_read;
 	pfn_airspy_board_id_name   my_airspy_board_id_name;
 	pfn_airspy_board_partid_serialno_read
@@ -149,10 +148,12 @@ const	char*		board_id_name (void);
 	int16_t		vgaGain;
 	int16_t		mixerGain;
 	int16_t		lnaGain;
-	DSPCOMPLEX	convBuffer [2 * 625 + 1];
+	int32_t		selectedRate;
+	DSPCOMPLEX	*convBuffer;
+	int16_t		convBufferSize;
 	int16_t		convIndex;
-	int16_t		mapTable_int   [2 * 512];
-	float		mapTable_float [2 * 512];
+	int16_t		mapTable_int   [4 * 512];
+	float		mapTable_float [4 * 512];
 	QSettings	*airspySettings;
 	RingBuffer<DSPCOMPLEX> *theBuffer;
 	int32_t		inputRate;

@@ -65,10 +65,10 @@ float	ver;
 	}
 
 	err			= theLoader -> my_mir_sdr_ApiVersion (&ver);
-	if (ver != MIR_SDR_API_VERSION) {
-	   fprintf (stderr, "Foute API: %f, %d\n", ver, err);
-	   statusLabel	-> setText ("mirics error");
-	}
+//	if (ver != MIR_SDR_API_VERSION) {
+//	   fprintf (stderr, "Foute API: %f, %d\n", ver, err);
+//	   statusLabel	-> setText ("mirics error");
+//	}
 
 	api_version	-> display (ver);
 	_I_Buffer	= new RingBuffer<int16_t>(2 * 1024 * 1024);

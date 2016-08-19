@@ -30,13 +30,15 @@ const	int	EXTIO_BASE_TYPE_SIZE = sizeof (float);
 
 	airspyHandler::airspyHandler (QSettings *s, bool *success) {
 int	result, i;
+int	distance	= 10000000;
+uint32_t myBuffer [20];
+uint32_t samplerate_count;
 
 	this	-> airspySettings	= s;
 	this	-> myFrame		= new QFrame (NULL);
 	setupUi (this -> myFrame);
 	
 	this	-> myFrame	-> show ();
-	inputRate		= Khz (2500);
 	*success		= false;
 	airspySettings	-> beginGroup ("airspyHandler");
 //	int16_t temp 		= airspySettings -> value ("linearity", 10).
@@ -58,14 +60,6 @@ int	result, i;
 	rf_bias			= false;
 	airspySettings	-> endGroup ();
 //
-//	The sizes of the mapTable and the convTable are
-//	predefined and follow from the input and output rate
-//	(250000 / 1000 / 2) vs (2048000 / 1000 / 2)
-	for (i = 0; i < 1024; i ++) {
-	   mapTable_int [i] =  int (floor (i * (1250.0 / 1024.0)));
-	   mapTable_float [i] = i * (1250.0 / 1024.0) - mapTable_int [i];
-	}
-	convIndex		= 0;
 	device			= 0;
 	serialNumber		= 0;
 	theBuffer		= NULL;
@@ -112,6 +106,47 @@ int	result, i;
 	             my_airspy_error_name ((airspy_error)result), result);
 	   return;
 	}
+
+	(void) my_airspy_set_sample_type (device, AIRSPY_SAMPLE_INT16_IQ);
+	(void) my_airspy_get_samplerates (device, &samplerate_count, 0);
+	fprintf (stderr, "%d samplerates are supported\n", samplerate_count); 
+	my_airspy_get_samplerates (device, myBuffer, samplerate_count);
+
+	selectedRate	= 0;
+	for (i = 0; i < samplerate_count; i ++) {
+	   fprintf (stderr, "%d \n", myBuffer [i]);
+	   if (abs (myBuffer [i] - 2048000) < distance) {
+	      distance	= abs (myBuffer [i] - 2048000);
+	      selectedRate = myBuffer [i];
+	   }
+	}
+
+	if (selectedRate == 0) {
+	   fprintf (stderr, "Sorry. cannot help you\n");
+	   return;
+	}
+	else
+	   fprintf (stderr, "selected samplerate = %d\n", selectedRate);
+
+	result = my_airspy_set_samplerate (device, selectedRate);
+	if (result != AIRSPY_SUCCESS) {
+           printf("airspy_set_samplerate() failed: %s (%d)\n",
+	             my_airspy_error_name((enum airspy_error)result), result);
+	   return;
+	}
+
+//	The sizes of the mapTable and the convTable are
+//	predefined and follow from the input and output rate
+//	(selectedRate / 1000) vs (2048000 / 1000)
+	convBufferSize		= selectedRate / 1000;
+	for (i = 0; i < 2048; i ++) {
+	   float inVal	= float (selectedRate / 1000);
+	   mapTable_int [i] =  int (floor (i * (inVal / 2048.0)));
+	   mapTable_float [i] = i * (inVal / 2048.0) - mapTable_int [i];
+	}
+	convIndex		= 0;
+	convBuffer		= new DSPCOMPLEX [convBufferSize + 1];
+
 	theBuffer		= new RingBuffer<DSPCOMPLEX> (256 *1024);
 //	connect (linearitySlider, SIGNAL (valueChanged (int)),
 //	         this, SLOT (set_linearity (int)));
@@ -220,7 +255,6 @@ int32_t	bufSize	= EXTIO_NS * EXTIO_BASE_TYPE_SIZE * 2;
 	   return false;
 	}
 	
-	setExternalRate (inputRate);
 //	set_linearity	(linearitySlider -> value ());
 //	set_sensitivity	(sensitivitySlider -> value ());
 	set_vga_gain	(vgaGain);
@@ -299,24 +333,25 @@ airspyHandler *p;
 int 	airspyHandler::data_available (void *buf, int buf_size) {	
 int16_t	*sbuf	= (int16_t *)buf;
 int nSamples	= buf_size / (sizeof (int16_t) * 2);
-DSPCOMPLEX temp [2 * 512];
+DSPCOMPLEX temp [2048];
 int32_t  i, j;
 
 	for (i = 0; i < nSamples; i ++) {
 	   convBuffer [convIndex ++] = DSPCOMPLEX (sbuf [2 * i] / (float)2048,
 	                                           sbuf [2 * i + 1] / (float)2048);
-	   if (convIndex > 1250) {
-	      for (j = 0; j < 2 * 512; j ++) {
+	   if (convIndex > convBufferSize) {
+	      for (j = 0; j < 2048; j ++) {
 	         int16_t  inpBase	= mapTable_int [j];
 	         float    inpRatio	= mapTable_float [j];
 	         temp [j]	= cmul (convBuffer [inpBase + 1], inpRatio) + 
 	                          cmul (convBuffer [inpBase], 1 - inpRatio);
 	      }
-	      theBuffer	-> putDataIntoBuffer (temp, 2 * 512);
+
+	      theBuffer	-> putDataIntoBuffer (temp, 2048);
 //
 //	shift the sample at the end to the beginning, it is needed
 //	as the starting sample for the next time
-	      convBuffer [0] = convBuffer [2 * 625];
+	      convBuffer [0] = convBuffer [convBufferSize];
 	      convIndex = 1;
 	   }
 	}
@@ -357,30 +392,6 @@ int result = my_airspy_open (&device);
 	}
 }
 
-int	airspyHandler::setExternalRate (int nsr) {
-airspy_samplerate_t as_nsr;
-
-	switch (nsr) {
-	   case 10000000:
-	      as_nsr = AIRSPY_SAMPLERATE_10MSPS;
-	      inputRate = nsr;
-	      break;
-	   case 2500000:
-	      as_nsr = AIRSPY_SAMPLERATE_2_5MSPS;
-	      inputRate = nsr;
-	      break;
-	   default:
-	      return -1;
-	}
-
-	int result = my_airspy_set_samplerate (device, as_nsr);
-	if (result != AIRSPY_SUCCESS) {
-	   printf ("airspy_set_samplerate() failed: %s (%d)\n",
-	            my_airspy_error_name ((airspy_error)result), result);
-	   return -1;
-	} else
-	   return 0;
-}
 //
 //	These functions are added for the SDR-J interface
 void	airspyHandler::resetBuffer (void) {
@@ -566,13 +577,13 @@ bool	airspyHandler::load_airspyFunctions (void) {
 	   return false;
 	}
 
-//	my_airspy_get_samplerates	= (pfn_airspy_get_samplerates)
-//	                       GETPROCADDRESS (Handle, "airspy_get_samplerates");
-//	if (my_airspy_get_samplerates == NULL) {
-//	   fprintf (stderr, "Could not find airspy_get_samplerates\n");
-//	   return false;
-//	}
-//
+	my_airspy_get_samplerates	= (pfn_airspy_get_samplerates)
+	                       GETPROCADDRESS (Handle, "airspy_get_samplerates");
+	if (my_airspy_get_samplerates == NULL) {
+	   fprintf (stderr, "Could not find airspy_get_samplerates\n");
+	   return false;
+	}
+
 	my_airspy_set_samplerate	= (pfn_airspy_set_samplerate)
 	                       GETPROCADDRESS (Handle, "airspy_set_samplerate");
 	if (my_airspy_set_samplerate == NULL) {
