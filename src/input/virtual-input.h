@@ -36,7 +36,7 @@
 #include	<QDialog>
 
 #define	NIX		0100
-#define	MIRICS_STICK	0101
+#define	SDRPLAY		0101
 #define	DAB_STICK	0102
 #define	GENERATOR	0104
 #define	FILEREADER	0110
