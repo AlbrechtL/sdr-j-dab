@@ -22,7 +22,6 @@
 #include	"ofdm-processor.h"
 #include	"gui.h"
 //
-#define syncBufferMask	(2 * 32768 - 1)
 
 	ofdmProcessor::ofdmProcessor	(virtualInput *theRig,
 	                                 DabParams	*p,
@@ -33,7 +32,8 @@
 #ifdef	HAVE_SPECTRUM
 	                                 RingBuffer<DSPCOMPLEX> *spectrumBuffer,
 #endif
-	                                 RingBuffer<DSPCOMPLEX> *iqBuffer) {
+	                                 RingBuffer<DSPCOMPLEX> *iqBuffer,
+	                                 uint8_t	freqSyncMethod) {
 int32_t	i;
 	this	-> theRig		= theRig;
 	params				= p;
@@ -49,7 +49,6 @@ int32_t	i;
 //
 	ofdmBuffer			= new DSPCOMPLEX [76 * T_s];
 	ofdmBufferIndex			= 0;
-	ibits				= new int16_t [2 * params -> K];
 	ofdmSymbolCount			= 0;
 	tokenCount			= 0;
 	sampleCnt			= 0;
@@ -59,7 +58,8 @@ int32_t	i;
 	my_ofdmDecoder		= new ofdmDecoder (params,
 	                                           iqBuffer,
 	                                           phaseSynchronizer -> getTable (),
-	                                           myRadioInterface);
+	                                           myRadioInterface,
+	                                           freqSyncMethod);
 	fineCorrector		= 0;	
 	coarseCorrector		= 0;
 	f2Correction		= false;
@@ -236,12 +236,13 @@ int32_t		i;
 DSPCOMPLEX	FreqCorr;
 int32_t		counter;
 float		currentStrength;
-int32_t		syncBufferIndex;
-int32_t		syncBufferSize	= syncBufferMask + 1;
-float		envBuffer	[syncBufferMask + 1];
+int32_t		syncBufferIndex	= 0;
+int32_t		syncBufferSize	= 10 * T_s;
+float		envBuffer	[syncBufferSize];
 float		signalLevel;
 int16_t		previous_1	= 1000;
 int16_t		previous_2	= 999;
+int16_t		ibits [2 * params -> K];
 
 	running		= true;
 	fineCorrector	= 0;
@@ -250,30 +251,24 @@ int16_t		previous_2	= 999;
 //	first, we initialize to get the buffers filled
 //
 //	we first fill the buffer
-initing:
+Initing:
 	   syncBufferIndex	= 0;
-	   signalLevel		= 0;
 	   currentStrength	= 0;
+	   sLevel		= 0;
 	   for (i = 0; i < 10 * T_s; i ++) {
-	      DSPCOMPLEX sample			= getSample (0);
-	      envBuffer [syncBufferIndex]	= jan_abs (sample);
-	      signalLevel			+= jan_abs (sample);
+	      (void)jan_abs (getSample (0));	// to build up sLevel
 	   }
 //
-//	overrule the current sLevel value
-	   sLevel	= signalLevel / (10 * T_s);
 notSynced:
 //	read in T_s samples for a next attempt;
-	   for (i = 0; i < T_s; i ++) {
-	      DSPCOMPLEX sample			= getSample (0);
-	      envBuffer [syncBufferIndex]	= jan_abs (sample);
-	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
-	   }
-
+	   syncBufferIndex	= 0;
 	   currentStrength	= 0;
-	   for (i = syncBufferIndex - 50; i < syncBufferIndex; i ++)
-	      currentStrength += envBuffer [i];
-
+	   for (i = 0; i < 50; i ++) {
+              DSPCOMPLEX sample                 = getSample (0);
+              envBuffer [syncBufferIndex]       = jan_abs (sample);
+              currentStrength                   += envBuffer [syncBufferIndex];
+              syncBufferIndex ++;
+           }
 
 //	we now have initial values for currentStrength and signalLevel
 //	Then we look for a "dip" in the datastream
@@ -286,9 +281,8 @@ SyncOnNull:
 	      envBuffer [syncBufferIndex] = jan_abs (sample);
 //	update the levels
 	      currentStrength += envBuffer [syncBufferIndex] -
-	                      envBuffer [(syncBufferIndex + syncBufferSize - 50) & syncBufferMask];
-	      syncBufferIndex =
-	                      (syncBufferIndex + 1) & syncBufferMask;
+	                      envBuffer [syncBufferIndex - 50];
+	      syncBufferIndex ++;
 	      counter ++;
 	      if (counter > 2 * T_s)	// hopeless
 	         goto notSynced;
@@ -299,33 +293,34 @@ SyncOnEndNull:
 	   while (currentStrength / 50 < 0.75 * sLevel) {
 	      DSPCOMPLEX sample = getSample (coarseCorrector + fineCorrector);
 	      envBuffer [syncBufferIndex] = abs (sample);
-//	update the levels
-	      currentStrength += envBuffer [syncBufferIndex] -
-	                        envBuffer [(syncBufferIndex + syncBufferSize - 50) & syncBufferMask];
-	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
-	      counter	++;
-	      if (counter > 3 * T_s)	// hopeless
+//      update the levels
+//      We constrain syncBufferIndex here to
+//      a value smaller than 2 * T_s but larger than 50, to a value
+//      smaller than 2 * T_s + T_null, which by itself is
+//      smaller than the bufferSize;
+              currentStrength += envBuffer [syncBufferIndex] -
+                                 envBuffer [syncBufferIndex - 50];
+              syncBufferIndex ++;
+              counter   ++;
+//
+	      if (syncBufferIndex > 2 * T_s + T_null)	// hopeless
 	         goto notSynced;
 	   }
+/**
+  *     The end of the null period is identified, probably about 40
+  *     samples earlier.
+  */
 
 SyncOnPhase:
 //
 //	here we also enter after having processed a full frame
 //	now read in Tu samples
-	   for (i = 0; i <  params -> T_u; i ++) {
+	   for (i = 0; i <  params -> T_u; i ++) 
 	      ofdmBuffer [i] = getSample (coarseCorrector + fineCorrector);
-	      envBuffer [syncBufferIndex] = jan_abs (ofdmBuffer [i]);
-//	update the levels
-	      currentStrength += envBuffer [syncBufferIndex] -
-	                              envBuffer [(syncBufferIndex  + syncBufferSize - 50) & syncBufferMask];
-	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
-	      counter ++;
-	   }
 //
 //	and then call upon the phase synchronizer to verify/identify
 //	the real "first" sample of the new frame
-	   startIndex = phaseSynchronizer ->
-	                        findIndex (ofdmBuffer, params -> T_u);
+	   startIndex = phaseSynchronizer -> findIndex (ofdmBuffer);
 	   if (startIndex < 0) { // no sync, try again
 //	      fprintf (stderr, "startindex fout op %d\n", startIndex);
 	      goto notSynced;
@@ -362,6 +357,8 @@ OFDM_PRS:
 	                     T_u - ofdmBufferIndex, coarseCorrector + fineCorrector);
 //
 //	block0 will set the phase reference for further decoding
+//	and - if the flag is set - will compute an estimate of the
+//	frequency offset
 	int16_t correction =
 	          my_ofdmDecoder  -> processBlock_0 (ofdmBuffer, f2Correction);
 
@@ -422,21 +419,11 @@ OFDM_SYMBOLS:
 //	assume everything went well and shift T_null samples
 	   syncBufferIndex	= 0;
 	   currentStrength	= 0;
-	   for (i = 0; i < T_null - 50; i ++) {
-	      DSPCOMPLEX sample	= getSample (coarseCorrector + fineCorrector);
-	      envBuffer [syncBufferIndex ++] = jan_abs (sample);
-	   }
-//
-//	and a new  currentLevel
-	   for (i = T_null - 50; i < T_null; i ++) {
-	      DSPCOMPLEX sample	= getSample (coarseCorrector + fineCorrector);
-	      envBuffer [syncBufferIndex] = jan_abs (sample);
-	      currentStrength 	+= envBuffer [syncBufferIndex ++];
-	   }
+	   counter		= 0;
+	   getSamples (ofdmBuffer, T_null, coarseCorrector + fineCorrector);
 //
 //	so, we skipped Tnull samples, so the real start should be T_g
 //	samples away
-	   counter	= 0;
 
 	   if (fineCorrector > params -> carrierDiff / 2) {
 	      coarseCorrector += params -> carrierDiff;
@@ -460,6 +447,10 @@ void	ofdmProcessor:: reset	(void) {
 	f2Correction	= true;
 }
 
+void	ofdmProcessor::stop		(void) {
+	running		= false;
+}
+
 void	ofdmProcessor::startDumping	(SNDFILE *f) {
 	if (dumping)
 	   return;
@@ -481,9 +472,5 @@ void	ofdmProcessor::coarseCorrectorOn (void) {
 
 void	ofdmProcessor::coarseCorrectorOff (void) {
 	f2Correction	= false;
-}
-
-void	ofdmProcessor::stop		(void) {
-	running		= false;
 }
 

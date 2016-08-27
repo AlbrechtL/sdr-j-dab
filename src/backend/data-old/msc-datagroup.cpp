@@ -50,8 +50,7 @@ int8_t	interleaveDelays [] = {
 	                         	 int16_t uepFlag,
 	                         	 int16_t protLevel,
 	                                 uint8_t DGflag,
-	                         	 int16_t FEC_scheme,
-	                                 bool	show_crcErrors) {
+	                         	 int16_t FEC_scheme) {
 int32_t i, j;
 	this	-> myRadioInterface	= mr;
 	this	-> DSCTy		= DSCTy;
@@ -62,9 +61,7 @@ int32_t i, j;
 	this	-> protLevel	= protLevel;
 	this	-> DGflag	= DGflag;
 	this	-> FEC_scheme	= FEC_scheme;
-	this	-> show_crcErrors	= show_crcErrors;
-	connect (this, SIGNAL (show_mscErrors (int)),
-	         mr, SLOT (show_mscErrors (int)));
+
 	switch (DSCTy) {
 	   default:
 	   case 5:			// do know yet
@@ -76,7 +73,7 @@ int32_t i, j;
 	      break;
 
 	   case 59:
-	      my_dataHandler	= new ip_dataHandler (mr, show_crcErrors);
+	      my_dataHandler	= new ip_dataHandler (mr);
 	      break;
 
 	   case 60:
@@ -110,9 +107,6 @@ int32_t i, j;
 	Buffer		= new RingBuffer<int16_t>(64 * 32768);
 	packetState	= 0;
 	streamAddress	= -1;
-//
-	handledPackets	= 0;
-	crcErrors	= 0;
 	start ();
 }
 
@@ -244,21 +238,11 @@ int16_t	address		= getBits   (data, 6, 10);
 uint16_t command	= getBits_1 (data, 16);
 int16_t	usefulLength	= getBits_7 (data, 17);
 int16_t	i;
-	if (usefulLength > 0)
-	fprintf (stderr, "CI = %d, address = %d, usefulLength = %d\n",
-	                 continuityIndex, address, usefulLength);
-	if (show_crcErrors && (++handledPackets >= 500)) {
-	   show_mscErrors (100 - crcErrors / 5);
-	   crcErrors	= 0;
-	   handledPackets = 0;
-	}
 
 	(void)continuityIndex;
 	(void)command;
-	if (!check_CRC_bits (data, packetLength * 8)) {
-	   crcErrors ++;
+	if (!check_CRC_bits (data, packetLength * 8))
 	   return;
-	}
 	if (address == 0)
 	   return;		// padding packet
 //
@@ -268,7 +252,7 @@ int16_t	i;
 	   streamAddress = address;
 	if (streamAddress != address)	// sorry
 	   return;
-	
+
 //	assemble the full MSC datagroup
 	if (packetState == 0) {	// waiting for a start
 	   if (firstLast == 02) {	// first packet

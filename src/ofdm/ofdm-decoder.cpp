@@ -39,12 +39,14 @@
 	ofdmDecoder::ofdmDecoder	(DabParams	*p,
 	                                 RingBuffer<DSPCOMPLEX> *iqBuffer,
 	                                 DSPCOMPLEX	*refTable,
-	                                 RadioInterface *mr) {
+	                                 RadioInterface *mr,
+	                                 uint8_t	freqSyncMethod) {
 int16_t	i;
 	this	-> params		= p;
 	this	-> iqBuffer		= iqBuffer;
 	this	-> refTable		= refTable;
 	this	-> myRadioInterface	= mr;
+	this	-> freqSyncMethod	= freqSyncMethod;
 	this	-> T_s			= params	-> T_s;
 	this	-> T_u			= params	-> T_u;
 	this	-> carriers		= params	-> K;
@@ -73,18 +75,15 @@ int16_t	i;
 }
 
 	ofdmDecoder::~ofdmDecoder	(void) {
-	delete	fft_handler;
-	delete	phaseReference;
-	delete	myMapper;
+	delete		fft_handler;
+	delete[]	phaseReference;
+	delete		myMapper;
 	delete[]	correlationVector;
 	delete[]	refArg;
 }
 
 int16_t	ofdmDecoder::processBlock_0 (DSPCOMPLEX *vi, bool flag) {
 int16_t	i, j, index_1 = 100;
-#ifndef	FULL_CORRELATION
-int16_t index_2	= 100;
-#endif
 
 	memcpy (fft_buffer, vi, T_u * sizeof (DSPCOMPLEX));
 	fft_handler	-> do_FFT ();
@@ -101,40 +100,38 @@ int16_t index_2	= 100;
 	   return 0;
 //	as a side effect we "compute" an estimate for the
 //	coarse offset
-#ifdef	SIMPLE_SYNCHRONIZATION
-	return getMiddle (fft_buffer);
-#endif
-//
+	if (freqSyncMethod == 0)
+	   return getMiddle (fft_buffer);
 
-#ifdef	FULL_CORRELATION
-//
-//	The phase differences are computed once
-	for (i = 0; i < SEARCH_RANGE + CORRELATION_LENGTH; i ++) {
-	   int16_t baseIndex = T_u - SEARCH_RANGE / 2 + i;
-	   correlationVector [i] =
-	                   arg (fft_buffer [baseIndex % T_u] *
-	                    conj (fft_buffer [(baseIndex + 1) % T_u]));
-	}
-	float	MMax	= 0;
-	for (i = 0; i < SEARCH_RANGE; i ++) {
-	   float sum	= 0;
-	   for (j = 1; j < CORRELATION_LENGTH; j ++) {
-	      sum += abs (refArg [j] * correlationVector [i + j]);
+	if (freqSyncMethod == 1) {
+//	The phase differences were computed once
+	   for (i = 0; i < SEARCH_RANGE + CORRELATION_LENGTH; i ++) {
+	      int16_t baseIndex = T_u - SEARCH_RANGE / 2 + i;
+	      correlationVector [i] =
+	                      arg (fft_buffer [baseIndex % T_u] *
+	                      conj (fft_buffer [(baseIndex + 1) % T_u]));
+	   }
+	   float	MMax	= 0;
+	   for (i = 0; i < SEARCH_RANGE; i ++) {
+	      float sum	= 0;
+	      for (j = 1; j < CORRELATION_LENGTH; j ++) 
+	         sum += abs (refArg [j] * correlationVector [i + j]);
 	      if (sum > MMax) {
 	         MMax = sum;
 	         index_1 = i;
 	      }
 	   }
-	}
 //
 //	Now map the index back to the right carrier
-	return T_u - SEARCH_RANGE / 2 + index_1 - T_u;
-#else
+	   return T_u - SEARCH_RANGE / 2 + index_1 - T_u;
+	}
 //
+//	Default is a manual match
 //	An alternative way is to look at a special pattern consisting
 //	of zeros in the row of args between successive carriers.
 	float Mmin	= 1000;
 	float OMmin	= 1000;
+	index_1		= 100;
 	for (i = T_u - SEARCH_RANGE / 2; i < T_u + SEARCH_RANGE / 2; i ++) {
               float a1  =  abs (abs (arg (fft_buffer [(i + 1) % T_u] *
                                 conj (fft_buffer [(i + 2) % T_u])) / M_PI) - 1);
@@ -158,11 +155,10 @@ int16_t index_2	= 100;
 	      if (sum < Mmin) {
 	        OMmin = Mmin;
 	         Mmin = sum;
-	         index_2 = i;
+	         index_1 = i;
 	      }
 	}
-	return index_2 - T_u;
-#endif
+	return index_1 - T_u;
 }
 
 //	for the other blocks of data, the first step is to go from

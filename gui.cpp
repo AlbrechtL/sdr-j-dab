@@ -78,6 +78,7 @@ const char *get_programm_language_string (uint8_t language);
  *	is embedded in actions, initiated by gui buttons
  */
 	RadioInterface::RadioInterface (QSettings	*Si,
+	                                uint8_t		freqSyncMethod,
 	                                QWidget		*parent):
 	                                                   QDialog (parent) {
 int16_t	k;
@@ -85,6 +86,7 @@ int16_t	k;
 // 	the setup for the generated part of the ui
 	setupUi (this);
 	dabSettings		= Si;
+	this	-> freqSyncMethod	= freqSyncMethod;
 //
 //	Before printing anything, we set
 	setlocale (LC_ALL, "");
@@ -150,13 +152,16 @@ int16_t	k;
 //	these initializations should NOT be forgotten.
 	mp2File		= NULL;
 	mp4File		= NULL;
+	ficBlocks	= 0;
+	ficSuccess	= 0;
 
 	setModeParameters (1);
 	my_mscHandler		= new mscHandler	(this,
 	                                                 &dabModeParameters,
 	                                                 our_audioSink,
 	                                                 true);
-	my_ficHandler		= new ficHandler	(this);
+	my_ficHandler		= new ficHandler	(this,
+	                                                 2 * dabModeParameters. K);
 //
 //	the default is:
 	the_ofdmProcessor = new ofdmProcessor (myRig,
@@ -168,7 +173,8 @@ int16_t	k;
 #ifdef	HAVE_SPECTRUM
 	                                       spectrumBuffer,
 #endif
-	                                       iqBuffer);
+	                                       iqBuffer,
+	                                       freqSyncMethod);
 //
 	ensemble.setStringList (Services);
 	ensembleDisplay	-> setModel (&ensemble);
@@ -889,13 +895,31 @@ void	RadioInterface::show_successRate (int s) {
 	errorDisplay	-> display (s);
 }
 
-void	RadioInterface::show_ficRatio (int s) {
-	ficRatioDisplay	-> display (s);
+void	RadioInterface::show_ficCRC (bool b) {
+        if (b)
+           ficSuccess ++;
+        if (++ficBlocks >= 100) {
+           ficRatioDisplay      -> display (ficSuccess);
+           ficSuccess   = 0;
+           ficBlocks    = 0;
+        }
 }
 
 void	RadioInterface::show_snr (int s) {
 	snrDisplay	-> display (s);
 }
+//      if so configured, the function might be triggered
+//      from the message decoding software. The GUI
+//      might decide to ignore the data sent
+void    RadioInterface::show_mscErrors  (int er) {
+        dataErrors     -> display (er);
+}
+//
+//      a slot, called by the iphandler
+void    RadioInterface::show_ipErrors   (int er) {
+        ipErrors     -> display (er);
+}
+
 //
 //	setDevice is called trough a signal from the gui
 //	Operation is in three steps: 
@@ -1065,7 +1089,8 @@ QString	file;
 #ifdef	HAVE_SPECTRUM
 	                                             spectrumBuffer,
 #endif
-	                                             iqBuffer);
+	                                             iqBuffer,
+	                                             freqSyncMethod);
 }
 //
 //
@@ -1169,7 +1194,9 @@ uint8_t	Mode	= s. toInt ();
 //	settings of the parameters.
 	delete 	the_ofdmProcessor;
 	setModeParameters (Mode);
-	my_ficHandler		-> setBitsperBlock	(2 * dabModeParameters. K);
+	delete my_ficHandler;
+	my_ficHandler		= new ficHandler	(this,
+	                                                 2 * dabModeParameters. K);
 	delete	my_mscHandler;
 	my_mscHandler		= new mscHandler	(this,
 	                                                 &dabModeParameters,
@@ -1185,7 +1212,8 @@ uint8_t	Mode	= s. toInt ();
 #ifdef	HAVE_SPECTRUM
 	                                             spectrumBuffer,
 #endif
-	                                             iqBuffer);
+	                                             iqBuffer,
+	                                             freqSyncMethod);
 //	and wait for setStart
 }
 //

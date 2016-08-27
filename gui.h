@@ -65,10 +65,13 @@ class RadioInterface: public QDialog,
 Q_OBJECT
 public:
 		RadioInterface		(QSettings	*,
+	                                 uint8_t,
 	                                 QWidget *parent = NULL);
 		~RadioInterface		(void);
 
 private:
+	QSettings		*dabSettings;
+	uint8_t			freqSyncMethod;
 	int16_t			outputDevice;
 	void			dumpControlState	(QSettings *);
 	bool			sourceDumping;
@@ -78,7 +81,6 @@ private:
 	int16_t			threshold;
 	DabParams		dabModeParameters;
 	void			setModeParameters	(int16_t);
-	QSettings		*dabSettings;
 	QStringListModel	ensemble;
 	QStringList		Services;
 #ifdef	HAVE_SPECTRUM
@@ -101,6 +103,9 @@ private:
 	void			setTuner		(int32_t);
 	QTimer			*displayTimer;
 	void			resetSelector		(void);
+	int16_t			ficBlocks;
+	int16_t			ficSuccess;
+
 	bool			spectrumWaterfall;
 	ofdmProcessor		*the_ofdmProcessor;
 	ficHandler		*my_ficHandler;
@@ -141,13 +146,15 @@ public slots:
 	void			nameofEnsemble		(int, const QString &);
 	void			addEnsembleChar		(char, int);
 	void			show_successRate	(int);
-	void			show_ficRatio		(int);
+	void			show_ficCRC		(bool);
 	void			show_snr		(int);
 	void			showIQ			(int);
 	void			setSynced		(char);
 	void			showLabel		(QString);
 	void			showMOT			(QByteArray, int);
 	void			send_datagram		(char *, int);
+        void			show_mscErrors          (int);
+        void			show_ipErrors           (int);
 #ifdef	HAVE_SPECTRUM
 	void			showSpectrum		(int);
 	void			set_spectrumHandler	(void);

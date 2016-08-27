@@ -42,7 +42,7 @@ int16_t	i, j;
 	}
 	ordernumber	= 1;
 	theDirectory	= NULL;
-	old_slide	= NULL;
+	oldSlide	= NULL;
 	connect (this, SIGNAL (the_picture (QByteArray, int)),
 	         mr, SLOT (showMOT (QByteArray, int)));
 }
@@ -309,7 +309,7 @@ int16_t	i;
 	   handleComplete (handle);
 }
 //
-//	we have data for all directory entries
+//	we have all segments
 void	motHandler::handleComplete (motElement *p) {
 int16_t i;
 //	if (p -> contentType != 2) {
@@ -327,13 +327,12 @@ int16_t i;
 	   if (p -> contentType != 2)
 	      return;
 	}
-	if (old_slide != NULL)
+	if (oldSlide != NULL)
 	   for (i = 0; i < p ->  numofSegments; i ++)
 	      p -> marked [i] = false;
 	fprintf (stderr, "going to show picture %s\n",
 	                                   (p -> name). toLatin1 (). data ());
 	the_picture (p -> body, p -> contentsubType);
-	old_slide	= p;
 }
 
 void	motHandler::checkDir (QString &s) {
@@ -371,7 +370,7 @@ int16_t	i;
 //	for the carrousel
 	for (i = 0; i < 16; i ++)
 	   if (table [i]. ordernumber != -1 &&
-	                  table [i]. transportId == transportId)
+	                   table [i]. transportId == transportId)
 	      return &table [i];
 	if (theDirectory == NULL)
 	   return NULL;

@@ -20,21 +20,15 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-//
-//	Interface between msc packages and real MOT handling
-#include	"mot-databuilder.h"
-#include	"mot-data.h"
+#include	"journaline-datahandler.h"
 
-#include	"gui.h"
-
-	mot_databuilder::mot_databuilder (RadioInterface *mr) {
-	my_motHandler	= new motHandler (mr);
+	journaline_dataHandler::journaline_dataHandler (void) {
 }
 
-	mot_databuilder::~mot_databuilder (void) {
+	journaline_dataHandler::~journaline_dataHandler (void) {
 }
 
-void	mot_databuilder::add_mscDatagroup (QByteArray &msc) {
+void	journaline_dataHandler::add_mscDatagroup (QByteArray &msc) {
 uint8_t *data		= (uint8_t *)(msc. data ());
 bool	extensionFlag	= getBits_1 (data, 0) != 0;
 bool	crcFlag		= getBits_1 (data, 1) != 0;
@@ -76,21 +70,31 @@ int16_t	i;
 	   next	+= lengthInd * 8;
 	}
 
+	uint16_t	ipLength	= 0;
 	int16_t		sizeinBits	=
 	              msc. size () - next - (crcFlag != 0 ? 16 : 0);
-	if (transportIdFlag) {
-	   QByteArray motVector;
-	   motVector. resize (sizeinBits / 8);
-	   for (i = 0; i < sizeinBits / 8; i ++)
-	      motVector [i] = getBits_8 (data, next + 8 * i);
 
-	
-	   my_motHandler -> 
-	                 process_mscGroup ((uint8_t *)(motVector. data ()),
-	                                   groupType,
-	                                   lastSegment,
-	                                   segmentNumber,
-	                                   transportId);
+	if (transportIdFlag) {
+	   QByteArray journalineVector;
+	   journalineVector. resize (sizeinBits / 8);
+	   for (i = 0; i < sizeinBits / 8; i ++)
+	      journalineVector [i] = getBits_8 (data, next + 8 * i);
+
+	   processJournaline (journalineVector,
+	                      groupType,
+	                      lastSegment,
+	                      segmentNumber,
+	                      transportId);
 	}
+}
+
+//
+//	Journaline is handled in a separate class, here
+//	we merely collect the data
+void	journaline_dataHandler::processJournaline (QByteArray	&d,
+	                                           uint8_t	groupType,
+	                                           bool		lastSegment,
+	                                           int16_t	segmentNumber,
+	                                           uint16_t	transportId)  {
 }
 

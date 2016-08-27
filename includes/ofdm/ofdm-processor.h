@@ -55,7 +55,8 @@ public:
 #ifdef	HAVE_SPECTRUM
 	                         RingBuffer<DSPCOMPLEX> *,
 #endif
-	                         RingBuffer<DSPCOMPLEX> *);	// passing
+	                         RingBuffer<DSPCOMPLEX> *,
+	                         uint8_t);	// passing
 		~ofdmProcessor		(void);
 	void	reset			(void);
 	void	stop			(void);
@@ -66,6 +67,7 @@ public:
 	void	stopDumping		(void);
 private:
 	bool		running;
+	uint8_t		freqSyncMethod;
 	int16_t		gain;
 	bool		dumping;
 	int16_t		dumpIndex;

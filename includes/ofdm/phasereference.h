@@ -36,7 +36,7 @@ class phaseReference : public phaseTable {
 public:
 		phaseReference (DabParams *, int16_t);
 		~phaseReference	(void);
-	int32_t	findIndex	(DSPCOMPLEX *, uint32_t);
+	int32_t	findIndex	(DSPCOMPLEX *);
 	DSPCOMPLEX	*getTable	(void);
 private:
 	int32_t		Tu;

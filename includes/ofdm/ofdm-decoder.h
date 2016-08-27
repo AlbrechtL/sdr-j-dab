@@ -40,7 +40,8 @@ public:
 		ofdmDecoder		(DabParams *,
 	                                 RingBuffer<DSPCOMPLEX> *,
 	                                 DSPCOMPLEX	*,
-	                                 RadioInterface *);
+	                                 RadioInterface *,
+	                                 uint8_t);
 		~ofdmDecoder		(void);
 	int16_t	processBlock_0		(DSPCOMPLEX *, bool);
 	void	processToken		(DSPCOMPLEX *, int16_t *, int32_t n);
@@ -52,6 +53,7 @@ private:
 	DabParams	*params;
 	RingBuffer<DSPCOMPLEX> *iqBuffer;
 	DSPCOMPLEX	*refTable;
+	uint8_t		freqSyncMethod;
 	RadioInterface	*myRadioInterface;
 	int32_t		T_s;
 	int32_t		T_u;
@@ -62,7 +64,6 @@ private:
 	DSPCOMPLEX	*fft_buffer;
 	permVector	*myMapper;
 	phaseTable	*phasetable;
-	int32_t		blockIndex;
 	int16_t		iqCount;
 	int16_t		displayToken;
 	int16_t		snrCount;
@@ -71,6 +72,7 @@ private:
 	int16_t		newStrength	(DSPCOMPLEX *);
 	float		*correlationVector;
 	float		*refArg;
+	int32_t		blockIndex;
 signals:
 	void		show_snr	(int);
 	void		showIQ		(int);

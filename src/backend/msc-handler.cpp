@@ -159,7 +159,8 @@ int16_t	*myBegin;
 	                                new_uepFlag,
 	                                new_protLevel,
 	                                new_DGflag,
-	                                new_FEC_scheme);
+	                                new_FEC_scheme,
+	                                false);
 	      DSCTy		= new_DSCTy;
 	      packetAddress	= new_packetAddress;
 	      DGflag		= new_DGflag;

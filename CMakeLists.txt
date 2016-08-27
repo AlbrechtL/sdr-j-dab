@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 2.8.11 )
-set (objectName sdr-j-dabreceiver-0.994)
+set (objectName sdr-j-dabreceiver-0.997)
 add_definitions ( -Wall)
 
 if(MINGW)

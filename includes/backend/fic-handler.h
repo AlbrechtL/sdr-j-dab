@@ -31,26 +31,27 @@
 #include	<stdio.h>
 #include	<stdint.h>
 #include	"viterbi.h"
-#include	<QObject>
-
+#include	<QThread>
+#include	<QMutex>
+#include	<QSemaphore>
+#include	"fib-processor.h"
 
 class	RadioInterface;
-class	mscHandler;
-class	fib_processor;
 
-class ficHandler: public QObject, public viterbi {
+class ficHandler: public QThread, public viterbi {
 Q_OBJECT
 public:
-		ficHandler		(RadioInterface *);
+		ficHandler		(RadioInterface *, int16_t);
 		~ficHandler		(void);
 	void	process_ficBlock	(int16_t *, int16_t);
-	void	setBitsperBlock		(int16_t);
 	void	clearEnsemble		(void);
 	int16_t	get_ficRatio		(void);
 	uint8_t	kindofService		(QString &);
 	void	dataforDataService	(QString &, packetdata *);
 	void	dataforAudioService	(QString &, audiodata *);
+	void	stop			(void);
 private:
+	void		run		(void);
 	void		process_ficInput	(int16_t *, int16_t);
 	int8_t		*PI_15;
 	int8_t		*PI_16;
@@ -64,11 +65,17 @@ private:
 	int16_t		ficMissed;
 	int16_t		ficRatio;
 	uint16_t	convState;
-	fib_processor	*fibProcessor;
+	fib_processor	fibProcessor;
 	uint8_t		PRBS [768];
 	uint8_t		shiftRegister [9];
+	QSemaphore	freeSlots;
+	QSemaphore	usedSlots;
+	QMutex		fibHandling;
+	int16_t		bufferFiller;
+	int16_t		bufferReader;
+	bool		running;
 signals:
-	void		show_ficRatio	(int);
+	void		show_ficCRC	(bool);
 };
 
 #endif

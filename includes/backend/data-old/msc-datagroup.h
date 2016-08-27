@@ -18,6 +18,7 @@
  *    You should have received a copy of the GNU General Public License
  *    along with SDR-J; if not, write to the Free Software
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  */
 #
 #ifndef	__MSC_DATAGROUP
@@ -42,14 +43,13 @@ Q_OBJECT
 public:
 	mscDatagroup	(RadioInterface *mr,
 	                 uint8_t	DSCTy,
-	                 int16_t	packetAddress,
-	                 int16_t	fragmentSize,
-	                 int16_t	bitRate,
-	                 int16_t	uepFlag,
-	                 int16_t	protLevel,
-	                 uint8_t	DGflag,
-	                 int16_t	FEC_scheme,
-	                 bool		show_crcErrors);
+	         int16_t	packetAddress,
+	         int16_t	fragmentSize,
+	         int16_t	bitRate,
+	         int16_t	uepFlag,
+	         int16_t	protLevel,
+	         uint8_t	DGflag,
+	         int16_t	FEC_scheme);
 	~mscDatagroup	(void);
 int32_t	process		(int16_t *, int16_t);
 void	stopRunning	(void);
@@ -63,9 +63,6 @@ private:
 	int16_t		protLevel;
 	uint8_t		DGflag;
 	int16_t		FEC_scheme;
-	bool		show_crcErrors;
-	int16_t		crcErrors;
-	int16_t		handledPackets;
 void	run		(void);
 	volatile bool	running;
 	QWaitCondition	Locker;
@@ -87,9 +84,6 @@ void	run		(void);
 	void		handlePackets		(uint8_t *, int16_t);
 	void		handlePacket		(uint8_t *);
 	virtual_dataHandler *my_dataHandler;
-//
-signals:
-	void		show_mscErrors		(int);
 };
 
 #endif

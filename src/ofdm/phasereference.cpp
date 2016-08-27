@@ -48,21 +48,21 @@ DSPFLOAT	Phi_k;
 }
 
 	phaseReference::~phaseReference (void) {
-	delete	refTable;
-	delete	fft_processor;
+	delete[]	refTable;
+	delete		fft_processor;
+	delete		res_processor;
 }
 
 DSPCOMPLEX	*phaseReference::getTable (void) {
 	return refTable;
 }
 
-int32_t	phaseReference::findIndex (DSPCOMPLEX *v, uint32_t amount) {
+int32_t	phaseReference::findIndex (DSPCOMPLEX *v) {
 int32_t	i;
 int32_t	maxIndex	= -1;
 float	sum		= 0;
 
-	memcpy (fft_buffer, v, amount * sizeof (DSPCOMPLEX));
-	memset (&fft_buffer [amount], 0, (Tu - amount) * sizeof (DSPCOMPLEX));
+	memcpy (fft_buffer, v, Tu * sizeof (DSPCOMPLEX));
 
 	fft_processor -> do_FFT ();
 
@@ -75,7 +75,7 @@ float	sum		= 0;
 	for (i = 0; i < Tu; i ++)
 	   sum	+= abs (res_buffer [i]);
 	Max	= -10000;
-	for (i = 0; i < (int)amount; i ++)
+	for (i = 0; i < Tu; i ++)
 	   if (abs (res_buffer [i]) > Max) {
 	      maxIndex = i;
 	      Max = abs (res_buffer [i]);

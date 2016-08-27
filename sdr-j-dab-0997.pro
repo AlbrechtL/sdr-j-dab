@@ -5,16 +5,16 @@
 ######################################################################
 
 TEMPLATE	= app
-TARGET		= sdr-j-dab-0.994
+TARGET		= sdr-j-dab-0.997
 QT		+= widgets network
 CONFIG		+= console
-QMAKE_CFLAGS	+= -flto  -ffast-math
-QMAKE_CXXFLAGS	+= -flto  -ffast-math
-QMAKE_LFLAGS	+= -flto 
-#QMAKE_CFLAGS	+= -ffast-math -g
-#QMAKE_CXXFLAGS	+= -ffast-math -g
-#QMAKE_LFLAGS	+= -g
-#CONFIG		+= NO_SSE_SUPPORT 
+#QMAKE_CFLAGS	+= -flto  -ffast-math
+#QMAKE_CXXFLAGS	+= -flto  -ffast-math
+#QMAKE_LFLAGS	+= -flto 
+QMAKE_CFLAGS	+= -ffast-math -g
+QMAKE_CXXFLAGS	+= -ffast-math -g
+QMAKE_LFLAGS	+= -g
+CONFIG		+= NO_SSE_SUPPORT 
 #DEFINES	+= SIMPLE_SYNCHRONIZATION
 #DEFINES	+= FULL_CORRELATION
 DEPENDPATH += . \
@@ -24,6 +24,7 @@ DEPENDPATH += . \
 	      ./src/backend \
 	      ./src/backend/audio \
 	      ./src/backend/data \
+	      ./src/backend/data/journaline \
 	      ./src/scopes-qwt6 \
 	      ./src/output \
 	      ./src/various \
@@ -34,6 +35,7 @@ DEPENDPATH += . \
 	      ./includes/backend \
 	      ./includes/backend/audio \
 	      ./includes/backend/data \
+	      ./includes/backend/data/journaline \
 	      ./includes/scopes-qwt6 \
 	      ./includes/output \
 	      ./includes/various 
@@ -46,6 +48,7 @@ INCLUDEPATH += . \
 	      ./includes/backend \
 	      ./includes/backend/audio \
 	      ./includes/backend/data \
+	      ./includes/backend/data/journaline \
 	      ./includes/scopes-qwt6 \
 	      ./includes/output \
 	      ./includes/various \
@@ -79,12 +82,20 @@ HEADERS += ./gui.h \
 //	   ./includes/backend/dab-processor.h \
 	   ./includes/backend/dab-virtual.h \
 	   ./includes/backend/data/ip-datahandler.h \
-	   ./includes/backend/data/journaline-datahandler.h \
 	   ./includes/backend/data/mot-databuilder.h \
 	   ./includes/backend/data/virtual-datahandler.h \
 	   ./includes/backend/data/pad-handler.h \
 	   ./includes/backend/data/mot-data.h \
 	   ./includes/backend/data/msc-datagroup.h \
+	   ./includes/backend/data/journaline-datahandler.h \
+	   ./includes/backend/data/journaline/dabdatagroupdecoder.h \
+	   ./includes/backend/data/journaline/crc_8_16.h \
+	   ./includes/backend/data/journaline/log.h \
+	   ./includes/backend/data/journaline/newssvcdec_impl.h \
+	   ./includes/backend/data/journaline/Splitter.h \
+	   ./includes/backend/data/journaline/dabdgdec_impl.h \
+	   ./includes/backend/data/journaline/newsobject.h \
+	   ./includes/backend/data/journaline/NML.h \
 	   ./includes/output/audiosink.h \
 	   ./includes/output/fir-filters.h \
 	   ./includes/scopes-qwt6/spectrogramdata.h \
@@ -123,13 +134,20 @@ SOURCES += ./main.cpp \
 	   ./src/backend/dab-serial.cpp \
 	   ./src/backend/dab-concurrent.cpp \
 	   ./src/backend/data/ip-datahandler.cpp \
-	   ./src/backend/data/journaline-datahandler.cpp \
 	   ./src/backend/data/mot-databuilder.cpp \
 	   ./src/backend/data/virtual-datahandler.cpp \
 	   ./src/backend/data/pad-handler.cpp \
 	   ./src/backend/data/mot-data.cpp \
 	   ./src/backend/data/msc-datagroup.cpp \
 	   ./src/backend/dab-processor.cpp \
+	   ./src/backend/data/journaline-datahandler.cpp \
+	   ./src/backend/data/journaline/crc_8_16.c \
+	   ./src/backend/data/journaline/log.c \
+	   ./src/backend/data/journaline/newssvcdec_impl.cpp \
+	   ./src/backend/data/journaline/Splitter.cpp \
+	   ./src/backend/data/journaline/dabdgdec_impl.c \
+	   ./src/backend/data/journaline/newsobject.cpp \
+	   ./src/backend/data/journaline/NML.cpp \
 	   ./src/backend/protTables.cpp \
 	   ./src/output/fir-filters.cpp \
 	   ./src/scopes-qwt6/iqdisplay.cpp \
@@ -157,6 +175,7 @@ INCLUDEPATH	+= /usr/include/qt5/qwt /usr/local/include
 LIBS		+= -lqwt-qt5 -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl  # fedora
 LIBS		+= -lportaudio
 LIBS		+= -lsndfile
+LIBS		+= -lz
 LIBS		+= -lfaad
 }
 #
