@@ -74,8 +74,8 @@
 }
 
 		mscHandler::~mscHandler	(void) {
-	delete[]  cifVector;
 	delete	dabHandler;
+//	delete[]  cifVector;
 }
 
 void	mscHandler::stop	(void) {
@@ -121,7 +121,7 @@ void	mscHandler::set_dataChannel (packetdata	*d) {
 }
 
 //
-//	add blocks. First is (should be) block 5, last is (should be) 76
+//	add blocks. First is (should be) block 4, last is (should be) 76
 void	mscHandler::process_mscBlock	(int16_t *fbits,
 	                                 int16_t blkno) { 
 int16_t	currentblk;
@@ -130,7 +130,7 @@ int16_t	*myBegin;
 	if (!work_to_be_done && !newChannel)
 	   return;
 
-	currentblk	= (blkno - 5) % numberofblocksperCIF;
+	currentblk	= (blkno - 4) % numberofblocksperCIF;
 //
 //	we only change channel at the start of a new frame!!!
 	if (newChannel) {

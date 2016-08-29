@@ -117,8 +117,10 @@ int16_t	i, j;
 
 		ficHandler::~ficHandler (void) {
 	running = false;
-	if (isRunning ())
-	   stop ();
+	if (isRunning ()) {
+	   usedSlots. release ();
+	   fibHandling. unlock ();
+	}
 	while (isRunning ())
 	   msleep (1);
 	delete	bitBuffer_out;
@@ -152,10 +154,7 @@ void	ficHandler::process_ficBlock (int16_t *data,
 }
 
 void	ficHandler::stop	(void) {
-	freeSlots. acquire ();
-	buffer [bufferFiller]. messageType = STOP;
-	bufferFiller	= (bufferFiller + 1) % QUEUE_SIZE;
-	usedSlots. release ();
+	running	= false;
 }
 
 void	ficHandler::clearEnsemble (void) {

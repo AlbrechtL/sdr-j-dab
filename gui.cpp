@@ -324,6 +324,7 @@ void	RadioInterface::TerminateProcess (void) {
 	}
 
 	my_mscHandler	-> stop	();		// might be concurrent
+	my_ficHandler	-> stop	();
 	the_ofdmProcessor -> stop ();		// definitely concurrent
 	myRig		-> stopReader ();	// may contain concurrency
 	our_audioSink	-> stop ();		// concurrent
@@ -751,6 +752,8 @@ QString a = ensemble. data (s, Qt::DisplayRole). toString ();
 		 ASCTyDisplay		-> display (d. DSCTy);
 	         break;
 	      }
+	   default:
+	      break;
 	}
 }
 

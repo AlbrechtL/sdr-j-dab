@@ -109,8 +109,10 @@ QString	name 	= QString ("");;
 	         pointer += length;
 	   } 
 	}
+
 	if (getHandle (transportId) != NULL)
 	   return;
+
 	if (lastFlag)	{ // single header
 	   newEntry (transportId, bodySize,
 	             contentType, contentsubType, name);
@@ -450,6 +452,7 @@ motElement	*currEntry = &(theDirectory -> dir_proper [index]);
 	currEntry -> segmentSize	= -1;
 	currEntry -> numofSegments	= -1;
 	currEntry -> name		= QString (name);
+	fprintf (stderr, "dir entry %s\n", currEntry -> name. toLatin1 (). data ());
 }
 
 void	motHandler::process_mscGroup (uint8_t	*data,

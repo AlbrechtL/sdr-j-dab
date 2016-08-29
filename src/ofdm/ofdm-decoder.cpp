@@ -135,8 +135,8 @@ int16_t	i, j, index_1 = 100;
 	for (i = T_u - SEARCH_RANGE / 2; i < T_u + SEARCH_RANGE / 2; i ++) {
               float a1  =  abs (abs (arg (fft_buffer [(i + 1) % T_u] *
                                 conj (fft_buffer [(i + 2) % T_u])) / M_PI) - 1);
-	      float a2	= abs (arg (fft_buffer [(i + 1) % T_u] *
-	      	                    conj (fft_buffer [(i + 3) % T_u])));
+              float a2  =  abs (abs (arg (fft_buffer [(i + 2) % T_u] *
+                                conj (fft_buffer [(i + 3) % T_u])) / M_PI) - 1);
 	      float a3	= abs (arg (fft_buffer [(i + 3) % T_u] *
 	      	                    conj (fft_buffer [(i + 4) % T_u])));
 	      float a4	= abs (arg (fft_buffer [(i + 4) % T_u] *

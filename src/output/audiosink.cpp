@@ -85,6 +85,7 @@ int32_t	i;
 	writerRunning	= false;
 	if (ostream != NULL)
 	   Pa_CloseStream (ostream);
+	ostream	= NULL;
 
 	if (portAudio)
 	   Pa_Terminate ();
