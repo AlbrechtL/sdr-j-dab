@@ -39,7 +39,7 @@
 #include	"virtual-input.h"
 #include	"ringbuffer.h"
 
-#define		DUMPSIZE	8192
+#define		DUMPSIZE	4096
 class	RadioInterface;
 class	common_fft;
 
@@ -71,7 +71,8 @@ private:
 	int16_t		gain;
 	bool		dumping;
 	int16_t		dumpIndex;
-	float		dumpBuffer [DUMPSIZE];
+	int16_t		dumpScaler;
+	int16_t		dumpBuffer [DUMPSIZE];
 	SNDFILE		*dumpFile;
 	virtualInput	*theRig;
 	DabParams	*params;

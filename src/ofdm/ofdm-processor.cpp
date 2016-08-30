@@ -23,6 +23,14 @@
 #include	"gui.h"
 //
 
+static inline
+int16_t	valueFor (int16_t b) {
+int16_t	res	= 1;
+	while (-- b > 1)
+	   res <<= 1;
+	return res;
+}
+
 	ofdmProcessor::ofdmProcessor	(virtualInput *theRig,
 	                                 DabParams	*p,
 	                                 RadioInterface *mr,
@@ -46,6 +54,7 @@ int32_t	i;
 	this	-> my_ficHandler	= fic;
 	dumping				= false;
 	dumpIndex			= 0;
+	dumpScaler			=  valueFor (theRig -> bitDepth ());
 //
 	ofdmBuffer			= new DSPCOMPLEX [76 * T_s];
 	ofdmBufferIndex			= 0;
@@ -134,10 +143,10 @@ DSPCOMPLEX temp;
 	theRig -> getSamples (&temp, 1);
 	bufferContent --;
 	if (dumping) {
-	   dumpBuffer [2 * dumpIndex] = real (temp);
-	   dumpBuffer [2 * dumpIndex + 1] = imag (temp);
+	   dumpBuffer [2 * dumpIndex] = real (temp) * dumpScaler;
+	   dumpBuffer [2 * dumpIndex + 1] = imag (temp) * dumpScaler;
 	   if ( ++dumpIndex >= DUMPSIZE / 2) {
-	      sf_writef_float (dumpFile, dumpBuffer, dumpIndex);
+	      sf_writef_short (dumpFile, dumpBuffer, dumpIndex);
 	      dumpIndex = 0;
 	   }
 	}
@@ -189,10 +198,10 @@ int32_t		i;
 	bufferContent -= n;
 	if (dumping) {
 	   for (i = 0; i < n; i ++) {
-	      dumpBuffer [2 * dumpIndex] = real (v [i]);
-	      dumpBuffer [2 * dumpIndex + 1] = imag (v [i]);
+	      dumpBuffer [2 * dumpIndex] = real (v [i]) * dumpScaler;
+	      dumpBuffer [2 * dumpIndex + 1] = imag (v [i]) * dumpScaler;
 	      if (++dumpIndex >= DUMPSIZE / 2) {
-	         sf_writef_float (dumpFile, dumpBuffer, dumpIndex);
+	         sf_writef_short (dumpFile, dumpBuffer, dumpIndex);
 	         dumpIndex = 0;
 	      }
 	   }

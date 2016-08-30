@@ -119,7 +119,6 @@ int16_t	i, j;
 	running = false;
 	if (isRunning ()) {
 	   usedSlots. release ();
-	   fibHandling. unlock ();
 	}
 	while (isRunning ())
 	   msleep (1);
