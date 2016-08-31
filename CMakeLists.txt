@@ -225,19 +225,11 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	)
 
 	if (SDRPLAY)
-	   find_library (SDRPLAYLIB libmirsdrapi-rsp.so)
-	   if (NOT(SDRPLAYLIB))
-	      message (FATAL_ERROR "please install sdrplay library")
-	   else (NOT(SDRPLAYLIB))
-	      set (extraLibs ${extraLibs} ${SDRPLAYLIB})
-	   endif()
 	   find_path (SDRPLAYLIB_INCLUDE_DIR
-	              NAMES mirsdrapi-rsp.h
-	              PATHS
-	              /usr/local/include/
-	   )
-	   include_directories (${SDRPLAYLIB_INCLUDE_DIR})
-
+                      NAMES mirsdrapi-rsp.h
+                      PATHS
+                      /usr/local/include/
+           include_directories (${SDRPLAYLIB_INCLUDE_DI
 	   set (${objectName}_UIS
 	        ${${objectName}_UIS}
 	        ./src/input/sdrplay/sdrplay-widget.ui 
@@ -246,6 +238,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	   set (${objectName}_MOCS
 	        ${${objectName}_MOCS}
 	        ./src/input/sdrplay/sdrplay.h
+	        ./src/input/sdrplay/sdrplay-worker.h
 	   )
 
 	   include_directories (
@@ -255,16 +248,20 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	   set ($(objectName)_HDRS
 	        ${${objectName}_HDRS}
 	        ./src/input/sdrplay/sdrplay.h
-	   )
+	        ./src/input/sdrplay/sdrplay-loader.h
+                ./src/input/sdrplay/sdrplay-worker.h
+           )
 
 	   set (${objectName}_SRCS
 	        ${${objectName}_SRCS}
 	        ./src/input/sdrplay/sdrplay.cpp
+	        ./src/input/sdrplay/sdrplay-worker.cpp
+                ./src/input/sdrplay/sdrplay-loader.cpp
 	   )
 
 	   add_definitions (-DHAVE_SDRPLAY)
 	endif (SDRPLAY)
-
+ 
 	if (AIRSPY)
            find_package(LibAIRSPY)
            if (NOT LIBAIRSPY_FOUND)

@@ -314,8 +314,14 @@ int16_t	i;
 //	we have data for all directory entries
 void	motHandler::handleComplete (motElement *p) {
 int16_t i;
-	if (p -> contentType != 2) {
+	if (p -> contentType == 2) 
+	   show_slide (p);
+	else
+	if (p -> contentType == 7)
+	   handle_epg	(p);
+	else {
 	   fprintf (stderr, "going to write file %s\n", (p ->  name). toLatin1 (). data ());
+	   fprintf (stderr, "contenttype = %d\n", p -> contentType);
 	   checkDir (p -> name);
 //
 	   FILE *x = fopen (((p -> name). toLatin1 (). data ()), "w");
@@ -326,9 +332,10 @@ int16_t i;
 	      (void)fwrite ((p -> body). data (), 1, p -> bodySize, x);
 	      fclose (x);
 	   }
-	   if (p -> contentType != 2)
-	      return;
 	}
+}
+void	motHandler::show_slide (motElement *p) {
+int16_t i;
 	if (old_slide != NULL)
 	   for (i = 0; i < p ->  numofSegments; i ++)
 	      p -> marked [i] = false;
@@ -338,6 +345,80 @@ int16_t i;
 	old_slide	= p;
 }
 
+void	motHandler::handle_epg (motElement *p) {
+uint8_t	*body	= (uint8_t *)(p -> body. data ());
+uint8_t	tag	= body [0];
+int32_t	length;
+int32_t	base;
+int16_t	localBase;
+
+	if (body [1] == 0xFE) {
+	   length	= (body [2] << 8) | body [3];
+	   base		= 4;
+	}
+	else 
+	if (body [1] == 0xFF) {
+	   length	= (((body[2] << 8) | body [3]) << 8) | body [4];
+	   base		= 5;
+	}
+	else {		// short body
+	   length	= body [1];
+	   base		= 2;
+	}
+
+	localBase	= base;
+//	we handle epgElements
+	while (base < length) 
+	   base	= handle_epgElement (body, base, length);
+}
+
+int16_t	motHandler::handle_epgElement (uint8_t	*data,
+	                               int16_t base, int16_t length) {
+uint8_t	tag	= data [base];
+int32_t	elementLength;
+int16_t	localBase;
+int16_t	bottom;
+
+	if (data [base + 1] == 0xFE) {
+	   elementLength = (data [base + 2] << 8) | data [base + 3];
+	   localBase	= base + 4;
+	}
+	else
+	if (data [base + 1] == 0xFF) {
+	   elementLength = (((data [base + 2] << 8) | data [base + 3]) << 8) | 
+	                                            data [base + 4];
+	   localBase	= base + 5;
+	}
+	else {		// short segment
+	   elementLength	= data [base + 1];
+	   localBase		= base + 2;
+	}
+	bottom	= localBase;
+	while (localBase < bottom + elementLength) {
+	   uint8_t tag = data [localBase];
+	   int16_t	localLength;
+	   if (data [localBase + 1] == 0xFE) {
+	      localLength = (data [localBase + 2] << 8) | data [localBase + 3];
+	      localBase += 4;
+	   }
+	   else
+	   if (data [localBase + 1] == 0xFF) {
+	      localLength = (((data [localBase + 2] << 8) |
+	                           data [localBase + 3]) << 8) | 
+	                               data [localBase + 4];
+	      localBase += 5;
+	   }
+	   else {
+	      localLength = data [localBase + 1];
+	      localBase += 2;
+	   }
+	   fprintf (stderr, "tag = %x, length = %d\n", tag, localLength);
+	   localBase += localLength;
+	}
+	   
+	return localBase + elementLength;
+}
+	
 void	motHandler::checkDir (QString &s) {
 int16_t	ind	= s. indexOf (QChar ('/'));
 int16_t	i;
@@ -452,7 +533,7 @@ motElement	*currEntry = &(theDirectory -> dir_proper [index]);
 	currEntry -> segmentSize	= -1;
 	currEntry -> numofSegments	= -1;
 	currEntry -> name		= QString (name);
-	fprintf (stderr, "dir entry %s\n", currEntry -> name. toLatin1 (). data ());
+//	fprintf (stderr, "dir entry %s\n", currEntry -> name. toLatin1 (). data ());
 }
 
 void	motHandler::process_mscGroup (uint8_t	*data,
