@@ -318,7 +318,7 @@ int16_t i;
 	   show_slide (p);
 	else
 	if (p -> contentType == 7)
-	   handle_epg	(p);
+	   handle_epgTopElement	(p);
 	else {
 	   fprintf (stderr, "going to write file %s\n", (p ->  name). toLatin1 (). data ());
 	   fprintf (stderr, "contenttype = %d\n", p -> contentType);
@@ -345,13 +345,15 @@ int16_t i;
 	old_slide	= p;
 }
 
-void	motHandler::handle_epg (motElement *p) {
+void	motHandler::handle_epgTopElement (motElement *p) {
 uint8_t	*body	= (uint8_t *)(p -> body. data ());
 uint8_t	tag	= body [0];
 int32_t	length;
 int32_t	base;
 int16_t	localBase;
 
+//
+//	get the length
 	if (body [1] == 0xFE) {
 	   length	= (body [2] << 8) | body [3];
 	   base		= 4;
@@ -366,56 +368,193 @@ int16_t	localBase;
 	   base		= 2;
 	}
 
-	localBase	= base;
-//	we handle epgElements
-	while (base < length) 
-	   base	= handle_epgElement (body, base, length);
+	length	+= base;
+	while ((base < length) && ((body [base] & 0x80) == 0x80))
+	   base	+= handle_epgAttribute (body, base);
+
+	while ((base < length) && (body [base] == 0x04)) // string token table
+	   base += handle_epgStringTokenTable (body, base);
+
+	while ((base < length) && (body [base] == 0x05))	// 
+	   base += handle_epgDefaultContentId (body, base);
+
+	while ((base < length) && (body [base] == 0x06))	//
+	   base	+= handle_epgDefaultLanguage (body, base);
+	
+	while ((base < length) && (body [base] != 0x01))
+	   base += handle_epgChildElement (body, base);
+
+	while ((base < length) && (body [base] == 0x1))	// CDATA
+	      base += handle_epgCData (body, base);
 }
 
-int16_t	motHandler::handle_epgElement (uint8_t	*data,
-	                               int16_t base, int16_t length) {
-uint8_t	tag	= data [base];
+int16_t	motHandler::handle_epgAttribute (uint8_t *data, int16_t base) {
+int32_t	elementLength;
+int16_t	localBase;
+
+	fprintf (stderr, "found attr %x on base %d\n", data [base], base);
+	if (data [base + 1] == 0xFE) {
+	   elementLength = (data [base + 2] << 8) | data [base + 3];
+	   localBase	= 4;
+	}
+	else
+	if (data [base + 1] == 0xFF) {
+	   elementLength = (((data [base + 2] << 8) | data [base + 3]) << 8) |
+	                                       data [base + 4];
+	   localBase	= 5;
+	}
+	else {		// short segment
+	   elementLength	= data [base + 1];
+	   localBase		= 2;
+	}
+//	do something useful here
+	fprintf (stderr, "Length of attribute %d\n", localBase + elementLength);
+	return localBase + elementLength;
+}
+
+int16_t	motHandler::handle_epgStringTokenTable (uint8_t *data, int16_t base) {
+int32_t	elementLength;
+int16_t	localBase;
+
+	if (data [base + 1] == 0xFE) {
+	   elementLength = (data [base + 2] << 8) | data [base + 3];
+	   localBase	= 4;
+	}
+	else
+	if (data [base + 1] == 0xFF) {
+	   elementLength = (((data [base + 2] << 8) | data [base + 3]) << 8) |
+	                     data [base + 4];
+	   localBase	= 5;
+	}
+	else {		// short segment
+	   elementLength	= data [base + 1];
+	   localBase		= 2;
+	}
+//	do something useful here
+	return localBase + elementLength;
+}
+
+int16_t	motHandler::handle_epgDefaultContentId (uint8_t *data, int16_t base) {
+int32_t	elementLength;
+int16_t	localBase;
+
+	if (data [base + 1] == 0xFE) {
+	   elementLength = (data [base + 2] << 8) | data [base + 3];
+	   localBase	= 4;
+	}
+	else
+	if (data [1] == 0xFF) {
+	   elementLength = (((data [base + 2] << 8) | data [base + 3]) << 8) |
+	                                          data [base + 4];
+	   localBase	= 5;
+	}
+	else {		// short segment
+	   elementLength	= data [base + 1];
+	   localBase		= 2;
+	}
+//	do something useful here
+	return localBase + elementLength;
+}
+
+int16_t motHandler::handle_epgDefaultLanguage (uint8_t *data, int16_t base) {
 int32_t	elementLength;
 int16_t	localBase;
 int16_t	bottom;
 
 	if (data [base + 1] == 0xFE) {
 	   elementLength = (data [base + 2] << 8) | data [base + 3];
-	   localBase	= base + 4;
+	   localBase	= 4;
 	}
 	else
 	if (data [base + 1] == 0xFF) {
-	   elementLength = (((data [base + 2] << 8) | data [base + 3]) << 8) | 
-	                                            data [base + 4];
-	   localBase	= base + 5;
+	   elementLength = (((data [base + 2] << 8) | data [base + 3]) << 8) |
+	                          data [base + 4];
+	   localBase	= 5;
 	}
 	else {		// short segment
 	   elementLength	= data [base + 1];
-	   localBase		= base + 2;
+	   localBase		= 2;
 	}
-	bottom	= localBase;
-	while (localBase < bottom + elementLength) {
-	   uint8_t tag = data [localBase];
-	   int16_t	localLength;
-	   if (data [localBase + 1] == 0xFE) {
-	      localLength = (data [localBase + 2] << 8) | data [localBase + 3];
-	      localBase += 4;
-	   }
-	   else
-	   if (data [localBase + 1] == 0xFF) {
-	      localLength = (((data [localBase + 2] << 8) |
-	                           data [localBase + 3]) << 8) | 
-	                               data [localBase + 4];
-	      localBase += 5;
-	   }
-	   else {
-	      localLength = data [localBase + 1];
-	      localBase += 2;
-	   }
-	   fprintf (stderr, "tag = %x, length = %d\n", tag, localLength);
-	   localBase += localLength;
+//	do something useful here
+	return localBase + elementLength;
+}
+
+static int depth	= 0;
+
+int16_t motHandler::handle_epgChildElement (uint8_t *body, int16_t base) {
+int32_t	length;
+int16_t	localLength;
+int16_t	localBase;
+int16_t	localEnd;
+
+int	i;
+	if ((body [base] == 0) || (body [base] > 40))
+	   return 6;
+	depth	++;
+	if (depth > 20)
+	   exit (21);
+
+	for (i = 0; i < depth; i ++)
+	   fprintf (stderr, "*");
+//	get the length
+	if (body [base + 1] == 0xFE) {
+	   length	= (body [base + 2] << 8) | body [base + 3];
+	   localBase		= 4;
 	}
-	   
+	else 
+	if (body [base + 1] == 0xFF) {
+	   length	= (((body [base + 2] << 8) | body [base + 3]) << 8) |
+	                       body [base + 4];
+	   localBase		= 5;
+	}
+	else {		// short body
+	   length	= body [base + 1];
+	   localBase		= 2;
+	}
+
+	fprintf (stderr, "Handling tag %x (%c) at base %d (up to %d)\n",
+	       body [base], body [base], base, base + localBase + length);
+	base		+= localBase;
+	localEnd	= base + length;
+
+	while ((base < localEnd) && ((body [base] & 0x80) == 0x80))
+	   base += handle_epgAttribute (body, base);
+
+	while ((base < localEnd) && (body [base] != 0x01))
+	   base += handle_epgChildElement (body, base);
+
+	while ((base < localEnd) && (body [base] == 0x01))
+	   base += handle_epgCData (body, base);
+
+	for (i = 0; i < depth; i ++)
+	   fprintf (stderr, "*");
+	fprintf (stderr, "Leaving level %d with base = %d, size %d\n", depth, base, localBase + length);
+	depth --;
+	return localBase + length;
+}
+	
+int16_t motHandler::handle_epgCData (uint8_t *data, int16_t base) {
+int32_t	elementLength;
+int16_t	localBase;
+int16_t	i;
+
+	if (data [base + 1] == 0xFE) {
+	   elementLength = (data [base + 2] << 8) | data [base + 3];
+	   localBase	= 4;
+	}
+	else
+	if (data [base + 1] == 0xFF) {
+	   elementLength = (data [base + 2] << 16) | (data [base + 3] << 8) |
+	                                    data [base + 4];
+	   localBase	= 5;
+	}
+	else {		// short segment
+	   elementLength	= data [base + 1];
+	   localBase		= 2;
+	}
+	for (i = 0; i < elementLength; i ++)
+	   fprintf (stderr, "%c", data [base + localBase + i]);
+	fprintf (stderr, "\n");
 	return localBase + elementLength;
 }
 	

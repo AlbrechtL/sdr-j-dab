@@ -113,6 +113,7 @@ uint8_t		freqSyncMethod	= 1;
  */
 	QApplication a (argc, argv);
 	MyRadioInterface = new RadioInterface (ISettings, freqSyncMethod);
+	QGuiApplication::setAttribute (Qt::AA_EnableHighDpiScaling);
 	MyRadioInterface -> show ();
 	a. exec ();
 /*

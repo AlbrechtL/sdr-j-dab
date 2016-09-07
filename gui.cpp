@@ -778,7 +778,7 @@ SF_INFO *sf_info	= (SF_INFO *)alloca (sizeof (SF_INFO));
 	QString file = QFileDialog::getSaveFileName (this,
 	                                     tr ("open file ..."),
 	                                     QDir::homePath (),
-	                                     tr ("raw data (*.sdr)"));
+	                                     tr ("raw data (*.sdr"));
 	file	= QDir::toNativeSeparators (file);
 	sf_info	-> samplerate	= INPUT_RATE;
 	sf_info	-> channels	= 2;
@@ -880,7 +880,7 @@ SF_INFO	*sf_info	= (SF_INFO *)alloca (sizeof (SF_INFO));
 	QString file = QFileDialog::getSaveFileName (this,
 	                                        tr ("open file .."),
 	                                        QDir::homePath (),
-	                                        tr ("Sound (*.wav)"));
+	                                        tr ("Sound (*.sdr)"));
 	file		= QDir::toNativeSeparators (file);
 	sf_info		-> samplerate	= 48000;
 	sf_info		-> channels	= 2;

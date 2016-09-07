@@ -129,11 +129,16 @@ private:
 	                                 int16_t	contentsubType,
 	                                 QString	name);
 	bool		isComplete	(motElement *);
-	void	handleComplete	(motElement *);
-	void	show_slide	(motElement *);
-	void	handle_epg	(motElement *);
-	int16_t	handle_epgElement	(uint8_t *, int16_t, int16_t);
-	void	checkDir	(QString &);
+	void	handleComplete		(motElement *);
+	void	show_slide		(motElement *);
+	void	handle_epgTopElement	(motElement *);
+	int16_t	handle_epgAttribute	(uint8_t *, int16_t);
+	int16_t	handle_epgStringTokenTable (uint8_t *, int16_t);
+	int16_t	handle_epgDefaultContentId (uint8_t *, int16_t);
+	int16_t handle_epgDefaultLanguage (uint8_t *, int16_t);
+	int16_t handle_epgChildElement	(uint8_t *, int16_t);
+	int16_t handle_epgCData		(uint8_t *, int16_t);
+	void	checkDir		(QString &);
 signals:
 	void	the_picture	(QByteArray, int);
 };

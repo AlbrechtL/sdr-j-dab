@@ -72,6 +72,12 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
             message(FATAL_ERROR "please install libfaad")
         endif ()
 
+	find_package(zlib)
+        if (NOT ZLIB_FOUND)
+            message(FATAL_ERROR "please install libz")
+        endif ()
+        list(APPEND extraLibs ${ZLIB_LIBRARY})
+
         find_package(LibSndFile)
         if (NOT LIBSNDFILE_FOUND)
             message(FATAL_ERROR "please install libsndfile")
@@ -113,12 +119,14 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	           ./includes/backend
 	           ./includes/backend/audio
 	           ./includes/backend/data
+	           ./includes/backend/data/journaline
 	           ./includes/various
 	           ./includes/output
 	           ./includes/scopes-qwt6
 	           ./src/input
 	           ./src/input/rawfiles
 	           ./src/input/wavfiles
+	           /usr/include
 	)
 
 	set (${objectName}_HDRS
@@ -142,6 +150,14 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./includes/backend/audio/mp2processor.h 
 	     ./includes/backend/data/ip-datahandler.h 
 	     ./includes/backend/data/journaline-datahandler.h 
+	     ./includes/backend/data/journaline/dabdatagroupdecoder.h
+	     ./includes/backend/data/journaline/crc_8_16.h 
+	     ./includes/backend/data/journaline/log.h 
+	     ./includes/backend/data/journaline/newssvcdec_impl.h 
+	     ./includes/backend/data/journaline/Splitter.h 
+	     ./includes/backend/data/journaline/dabdgdec_impl.h 
+	     ./includes/backend/data/journaline/newsobject.h 
+	     ./includes/backend/data/journaline/NML.h 
 	     ./includes/backend/data/mot-databuilder.h 
 	     ./includes/backend/data/virtual-datahandler.h 
 	     ./includes/backend/data/pad-handler.h 
@@ -186,6 +202,13 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 	     ./src/backend/dab-virtual.cpp 
 	     ./src/backend/data/ip-datahandler.cpp 
 	     ./src/backend/data/journaline-datahandler.cpp 
+	     ./src/backend/data/journaline/crc_8_16.c 
+	     ./src/backend/data/journaline/log.c 
+	     ./src/backend/data/journaline/newssvcdec_impl.cpp 
+	     ./src/backend/data/journaline/Splitter.cpp 
+	     ./src/backend/data/journaline/dabdgdec_impl.c 
+	     ./src/backend/data/journaline/newsobject.cpp 
+	     ./src/backend/data/journaline/NML.cpp 
 	     ./src/backend/data/mot-databuilder.cpp 
 	     ./src/backend/data/virtual-datahandler.cpp 
 	     ./src/backend/data/pad-handler.cpp 
@@ -229,7 +252,8 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
                       NAMES mirsdrapi-rsp.h
                       PATHS
                       /usr/local/include/
-           include_directories (${SDRPLAYLIB_INCLUDE_DI
+	   )
+           include_directories (${SDRPLAYLIB_INCLUDE_DIR})
 	   set (${objectName}_UIS
 	        ${${objectName}_UIS}
 	        ./src/input/sdrplay/sdrplay-widget.ui 
