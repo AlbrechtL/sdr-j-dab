@@ -6,5 +6,6 @@ Different devices can be included or excluded in the exectable
 by commenting out (or uncommenting) the appropriate lines
 in the configuration files
 
-Note that for airspy you need to install the 1.07 version
+Note that the "latest version" is the one I am working on and experimenting with. You might want to use the most recent "stable" version
+
 

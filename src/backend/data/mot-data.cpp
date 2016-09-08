@@ -352,6 +352,7 @@ int32_t	length;
 int32_t	base;
 int16_t	localBase;
 
+	return;
 //
 //	get the length
 	if (body [1] == 0xFE) {

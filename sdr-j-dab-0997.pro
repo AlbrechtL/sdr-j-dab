@@ -14,9 +14,8 @@ CONFIG		+= console
 QMAKE_CFLAGS	+= -ffast-math -g
 QMAKE_CXXFLAGS	+= -ffast-math -g
 QMAKE_LFLAGS	+= -g
+#comment this out when you are running/compiling on a machine with sse support
 CONFIG		+= NO_SSE_SUPPORT 
-#DEFINES	+= SIMPLE_SYNCHRONIZATION
-#DEFINES	+= FULL_CORRELATION
 DEPENDPATH += . \
 	      ./src \
 	      ./includes \
