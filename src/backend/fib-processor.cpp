@@ -558,7 +558,8 @@ bool		extensionFlag;
 	   SCid = getBits (d, lOffset + 4, 12);
 	   lOffset += 16;
 	   if (find_packetComponent ((SCIds << 4) | SCid) != NULL) {
-	      fprintf (stderr, "packet component bestaat !!\n");
+//	      fprintf (stderr, "packet component bestaat !!\n");
+	      ;
 	   }
 	}
 	else {
@@ -1206,7 +1207,7 @@ int16_t	i, j;
 	   if (listofServices [i]. serviceLabel. label != s)
 	      continue;
 
-	   fprintf (stderr, "we found for %s serviceId %d\n", s. toLatin1 (). data (), 
+//	   fprintf (stderr, "we found for %s serviceId %d\n", s. toLatin1 (). data (), 
 	                      listofServices [i]. serviceId);
 	   selectedService = listofServices [i]. serviceId;
 	   for (j = 0; j < 64; j ++) {
@@ -1221,7 +1222,7 @@ int16_t	i, j;
 
 	      if (components [j]. TMid == 00) 
 	         return AUDIO_SERVICE;
-	      fprintf (stderr, "TMid == %d\n", components [j]. TMid);
+//	      fprintf (stderr, "TMid == %d\n", components [j]. TMid);
 	   }
 	}
 	return UNKNOWN_SERVICE;

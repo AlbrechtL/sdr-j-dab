@@ -580,7 +580,6 @@ void	RadioInterface::No_Signal_Found (void) {
 void	RadioInterface::Yes_Signal_Found (void) {
 	if (!scanning)
 	   return;
-	fprintf (stderr, "entering yes signal with %d\n", scanning);
 	set_Scanning ();
 }
 

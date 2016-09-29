@@ -83,13 +83,23 @@ int16_t	i;
 //
 //
 //	Here we end up when F_PAD type = 00 and X-PAD Ind = 02
-//
+static
+int16_t	mapLength (int16_t ind) {
+	return ind == 0 ? 4 :
+	       ind == 1 ? 6 :
+	       ind == 2 ? 8 :
+	       ind == 3 ? 12 :
+	       ind == 4 ? 16 :
+	       ind == 5 ? 24 :
+	       ind == 6 ? 32 : 48;
+}
+
 void	padHandler::handle_variablePAD (uint8_t *b,
 	                                int16_t count, uint8_t CI_flag) {
 int16_t	CI_index = 0;
 uint8_t CI_table [16];
 int16_t	i, j;
-int16_t	base	= count - 2 - 1;	//for the F-pad
+int16_t	base	= count - 2 - 1;	// for the F-pad
 int16_t	length	= 0;
 
 	if (CI_flag == 0)	// I do not understand
@@ -108,24 +118,19 @@ int16_t	length	= 0;
 //
 	for (i = 0; i < CI_index; i ++) {
 	   uint8_t appType = CI_table [i] & 037;
-	   int16_t ind = CI_table [i] >> 5;
-	   int16_t length = ind == 0 ? 4 :
-	                    ind == 1 ? 6 :
-	                    ind == 2 ? 8 :
-	                    ind == 3 ? 12 :
-	                    ind == 4 ? 16 :
-	                    ind == 5 ? 24 :
-	                    ind == 6 ? 32 : 48;
+	   int16_t length =  mapLength (CI_table [i] >> 5);
 
 //	with appType == 1 we have a new start, 
 	   if (appType == 1) {		// length 4 bytes
 	      uint8_t	byte_0	= b [base];
 	      uint8_t	byte_1	= b [base - 1];
 //
-//	still not very clear what the crc is doing here
+//	still not very clear what the crc is referring to
 	      uint16_t	crc	= (b [base - 2] << 8) | b [base - 3];
-	      xpad_length	= ((byte_0 & 077) << 8) | byte_1;
-	      xpad_bufferIndex	= 0;
+	      msc_dataGroupLength	= ((byte_0 & 077) << 8) | byte_1;
+//	      fprintf (stderr, "msc_dataGroupLength = %d\n",
+//	                                    msc_dataGroupLength);
+	      msc_dataGroupIndex	= 0;
 	      base -= 4;
 	      last_appType = 1;
 	      continue;
@@ -166,67 +171,76 @@ int16_t	length	= 0;
 	   }
 	}
 }
-
-
-void	padHandler::dynamicLabel (uint8_t *data, int16_t length, uint8_t CI) {
-static bool xpadActive = false;
-static QString xpadtext = QString ("");
-static int16_t segmentLength = 0;
+//
+static bool dynamicLabelActive	= false;
+static QString dynamicLabelSegmentText = QString ("");
+static int16_t segmentLength	= 0;
 static int16_t segmentno = 0;
-static int16_t clength	= 0;
+static int16_t currentLength	= 0;
+
+//	A dynamic label is created from a sequence of (dynamic) xpad
+//	fields, starting with CI = 2, continuing with CI = 3
+void	padHandler::dynamicLabel (uint8_t *data, int16_t length, uint8_t CI) {
 int16_t	i;
 
 	if ((CI & 037) == 02) {	// start of segment
-	   if (xpadActive) {
-	      xpadtext. truncate (segmentLength + 1);
-	      addSegment (segmentno, xpadtext);
+	   if (dynamicLabelActive) {
+	      dynamicLabelSegmentText. truncate (segmentLength + 1);
+	      addSegment (segmentno, dynamicLabelSegmentText);
 	   }
 
-	   xpadtext 	= QString ("");
-	   xpadActive	= true;
-	   uint16_t prefix = (data [0] << 8) | data [1];
-	   uint8_t field_1 = (prefix >> 8) & 017;
-	   uint8_t Cflag   = (prefix >> 12) & 01;
-	   uint8_t first   = (prefix >> 14) & 01;
-	   uint8_t last    = (prefix >> 13) & 01;
+	   dynamicLabelSegmentText 	= QString ("");
+	   dynamicLabelActive	= true;
+	   uint16_t prefix	= (data [0] << 8) | data [1];
+	   uint8_t field_1	= (prefix >> 8) & 017;
+	   uint8_t Cflag        = (prefix >> 12) & 01;
+	   uint8_t first        = (prefix >> 14) & 01;
+	   uint8_t last         = (prefix >> 13) & 01;
+
 	   if (first) { 
 	      segmentno = 1;
 	      charSet = (prefix >> 4) & 017;
 	   }
 	   else 
 	      segmentno = (prefix >> 4) & 07;
-	   if (Cflag)
-	      dynamicLabelText = QString ("");
+
+	   if (Cflag)		// not sure, but to be on the safe side
+	      dynamicLabelSegmentText = QString ("");
 	   else { 
 	      segmentLength = field_1;
-	      clength = length - 2;
+	      currentLength = length - 2;
 	   }
+
 	   QString help = toQStringUsingCharset (
 	                        (const char *) &data [2],
 	                           (CharacterSet) charSet);
-	   xpadtext. append (help);
+	   dynamicLabelSegmentText. append (help);
 	}
 	else
-	if (((CI & 037) == 03) && xpadActive) {	
+	if (((CI & 037) == 03) && dynamicLabelActive) {	
 	   QString help = toQStringUsingCharset (
 	                        (const char *) data,
 	                           (CharacterSet) charSet);
-	   xpadtext. append (help);
-	   clength += length;
+	   dynamicLabelSegmentText. append (help);
+	   currentLength += length;
 	}
 	else
-	   xpadActive = false;
+	   dynamicLabelActive = false;
 }
-
+//
+//	The dynamic label segments are concatenated
+static
+int recentSegment = 0;
 void	padHandler::addSegment (uint16_t segmentno, QString s) {
-static int lastSegment = 0;
+
 	if (segmentno == 1)
 	   s. prepend (' ');
+
 	if (dynamicLabelText. length () + s. length () > 50)
 	   dynamicLabelText. remove (1, dynamicLabelText. length () + s. length () - 50);
 	dynamicLabelText. append (s);
 	showLabel (dynamicLabelText);
-	lastSegment = segmentno;
+	recentSegment = segmentno;
 }
 //
 //
@@ -238,22 +252,23 @@ int16_t	i;
 #ifndef	MOT_BASICS__
 	return;
 #endif
-	if (xpad_bufferIndex < 0)
+	if (msc_dataGroupIndex < 0)
 	   return;
 	if (length < 0)
 	   return;
 	
-	if (xpad_bufferIndex + length >= 8192) {
-	   fprintf (stderr, "bagger length = %d (%d)\n", length, xpad_bufferIndex);
+	if (msc_dataGroupIndex + length >= 8192) {
+	   fprintf (stderr, "bagger length = %d (%d)\n", length, msc_dataGroupIndex);
 	   return;
 	}
+
 	for (i = 0; i < length; i ++)
-	   xpad_buffer [xpad_bufferIndex ++] = data [i];
-	if (xpad_bufferIndex < xpad_length)
+	   msc_dataGroupBuffer [msc_dataGroupIndex ++] = data [i];
+	if (msc_dataGroupIndex < msc_dataGroupLength)
 	   return;
 
-	build_MSC_segment (xpad_buffer, xpad_length);
-	xpad_bufferIndex	= 0;
+	build_MSC_segment (msc_dataGroupBuffer, msc_dataGroupLength);
+	msc_dataGroupIndex	= 0;
 }
 
 void	padHandler::build_MSC_segment (uint8_t *mscdataGroup, int16_t length) {

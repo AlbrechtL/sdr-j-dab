@@ -18,7 +18,6 @@
  *    You should have received a copy of the GNU General Public License
  *    along with SDR-J; if not, write to the Free Software
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
  */
 
 #ifndef	__PAD_HANDLER__
@@ -50,9 +49,9 @@ private:
 	QString	dynamicLabelText;
 	int16_t	charSet;
 	motHandler	*my_motHandler;
-	int16_t	xpad_length;
-	int16_t xpad_bufferIndex;
-	uint8_t	xpad_buffer	[8192];
+	int16_t	msc_dataGroupLength;
+	int16_t msc_dataGroupIndex;
+	uint8_t	msc_dataGroupBuffer	[8192];
 	uint8_t	last_appType;
 signals:
 	void		showLabel			(QString);
