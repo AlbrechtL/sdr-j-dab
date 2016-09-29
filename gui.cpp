@@ -94,7 +94,7 @@ int16_t	k;
 	myRig			= new virtualInput ();
 	running			= false;
 	autoCorrector 		= true;
-
+	scanning		= false;
 	threshold		=
 	           dabSettings -> value ("threshold", 3). toInt ();
 //	Note that the generation of values to be displayed
@@ -104,11 +104,13 @@ int16_t	k;
 	isSynced		= UNSYNCED;
 	syncedLabel		->
 	               setStyleSheet ("QLabel {background-color : red}");
+	syncedLabel		-> setToolTip (QString ("green  means time synchronization"));
 
 	iqBuffer		= new RingBuffer<DSPCOMPLEX> (2 * 1536);
 	iqDisplaysize		=
 	               dabSettings -> value ("iqDisplaysize", 2 * 256). toInt ();
 	myIQDisplay		= new IQDisplay (iqDisplay, iqDisplaysize);
+	iqDisplay		-> setToolTip (QString ("Constellation of data points"));
 //
 	TunedFrequency		= MHz (200);	// any value will do
 	outRate			= 48000;	// not used
@@ -212,8 +214,11 @@ int16_t	k;
 	              this, SLOT (set_mp4File (void)));
 	connect (audioDump, SIGNAL (clicked (void)),
 	              this, SLOT (set_audioDump (void)));
-	connect (correctorReset, SIGNAL (clicked (void)),
-	              this, SLOT (autoCorrector_on (void)));
+	connect (resetButton, SIGNAL (clicked (void)),
+	              this, SLOT (hard_Reset (void)));
+	connect (scanButton, SIGNAL (clicked (void)),
+	         this, SLOT (set_Scanning (void)));
+	scanButton	-> setToolTip (QString ("Experimental feature, scans over the signals in the current band.\n Scanning will stop as soon as a signal is detected"));
 #ifdef	HAVE_SPECTRUM
 	connect (spectrumButton, SIGNAL (clicked (void)),
 	              this, SLOT (set_spectrumHandler (void)));
@@ -263,7 +268,6 @@ int16_t	k;
 }
 
 	RadioInterface::~RadioInterface () {
-	fprintf (stderr, "we gaan nu echt deleten\n");
 }
 //
 //	at the end, save the values used
@@ -490,6 +494,9 @@ int16_t	i;
 struct dabFrequencies *finger;
 bool	localRunning	= running;
 
+	if (scanning)
+	   set_Scanning ();	// switch it off
+
 	if (localRunning) {
 	   our_audioSink	-> stop ();
 	   myRig		-> stopReader ();
@@ -515,7 +522,9 @@ bool	localRunning	= running;
 	protLevelDisplay	-> display (0);
 	bitRateDisplay		-> display (0);
 	ASCTyDisplay		-> display (0);
-	dynamicLabel		-> setText	("");
+	dynamicLabel		-> setText ("");
+	nameofLanguage	        -> setText ("");
+	programType	        -> setText ("");
 
 	TunedFrequency		= 0;
 	if (dabBand == BAND_III)
@@ -544,6 +553,91 @@ bool	localRunning	= running;
 	
 }
 //
+//	If the ofdm processor has waited for a period of N frames
+//	to get a start of a synchronization,
+//	it sends a signal to the GUI handler
+//	If "scanning" is "on" we hop to the next frequency on
+//	the list
+void	RadioInterface::No_Signal_Found (void) {
+	if (!scanning)
+	   return;
+//
+//	we stop the thread from running,
+//	Increment the frequency
+//	and restart
+	the_ofdmProcessor -> stop ();
+	while (!the_ofdmProcessor -> isFinished ())
+	   usleep (10000);
+	Increment_Channel ();
+	clearEnsemble ();
+	the_ofdmProcessor -> start ();
+	the_ofdmProcessor	-> coarseCorrectorOn ();
+	the_ofdmProcessor	-> reset ();
+}
+//
+//	In case the scanning button was pressed, we
+//	set it off as soon as we have a signal found
+void	RadioInterface::Yes_Signal_Found (void) {
+	if (!scanning)
+	   return;
+	fprintf (stderr, "entering yes signal with %d\n", scanning);
+	set_Scanning ();
+}
+
+void	RadioInterface::set_Scanning	(void) {
+	if (!running)
+	   return;
+	scanning	= !scanning;
+	if (the_ofdmProcessor != NULL)
+	   the_ofdmProcessor -> set_scanMode (scanning);
+	if (scanning) {
+	   scanButton -> setText ("scanning");
+	   Increment_Channel ();
+	}
+	else
+	   scanButton -> setText ("scan");
+}
+//
+//	Increment channel is called during scanning.
+//	The approach taken here is to increment the current index
+//	in the combobox and select the new frequency.
+//	Tp avoid disturbance, we disconnect the combobox
+//	temporarily
+void	RadioInterface::Increment_Channel (void) {
+int16_t	i;
+struct dabFrequencies *finger;
+int	cc	= channelSelector -> currentIndex ();
+
+	cc	+= 1;
+	if (cc >= channelSelector -> count ())
+	   cc = 0;
+	disconnect (channelSelector, SIGNAL (activated (const QString &)),
+	              this, SLOT (set_channelSelect (const QString &)));
+	channelSelector -> setCurrentIndex (cc);
+//
+//	Now setting the frequency
+	TunedFrequency		= 0;
+	if (dabBand == BAND_III)
+	   finger = bandIII_frequencies;
+	else
+	   finger = Lband_frequencies;
+
+	for (i = 0; finger [i]. key != NULL; i ++) {
+	   if (finger [i]. key == channelSelector -> currentText ()) {
+	      TunedFrequency	= KHz (finger [i]. fKHz);
+	      setTuner (TunedFrequency);
+	      break;
+	   }
+	}
+
+	if (TunedFrequency == 0)
+	   return;
+
+	setTuner (TunedFrequency);
+	connect    (channelSelector, SIGNAL (activated (const QString &)),
+	              this, SLOT (set_channelSelect (const QString &)));
+}
+
 //	on changing settings, we clear all things in the gui
 //	related to the ensemble
 void	RadioInterface::clearEnsemble	(void) {
@@ -572,6 +666,9 @@ void	RadioInterface::clearEnsemble	(void) {
 	protLevelDisplay	-> display (0);
 	bitRateDisplay		-> display (0);
 	ASCTyDisplay		-> display (0);
+	dynamicLabel		-> setText ("");
+	nameofLanguage	        -> setText (" ");
+	programType	        -> setText (" ");
 }
 
 void	RadioInterface::addtoEnsemble (const QString &s) {
@@ -594,39 +691,40 @@ QString s;
 	ensembleId		-> display (id);
 	ensembleName		-> setText (v);
 	the_ofdmProcessor	-> coarseCorrectorOff ();
+	Yes_Signal_Found	();
 }
 
 static 
 const char *table12 [] = {
-"none",
-"news",
-"current affairs",
-"information",
-"sport",
-"education",
-"drama",
-"arts",
-"science",
-"talk",
-"pop music",
-"rock music",
-"easy listening",
-"light classical",
-"classical music",
-"other music",
-"wheather",
-"finance",
-"children\'s",
-"factual",
-"religion",
-"phone in",
-"travel",
-"leisure",
-"jazz and blues",
-"country music",
-"national music",
-"oldies music",
-"folk music",
+"NONE",
+"NEWS",
+"CURRENT AFFAIRS",
+"INFORMATION",
+"SPORT",
+"EDUCATION",
+"DRAMA",
+"ARTS",
+"SCIENCE",
+"TALK",
+"POP MUSIC",
+"ROCK MUSIC",
+"EASY LISTENING",
+"LIGHT CLASSICAL",
+"CLASSICAL MUSIC",
+"OTHER MUSIC",
+"WHEATHER",
+"FINANCE",
+"CHILDREN\'S",
+"FACTUAL",
+"RELIGION",
+"PHONE IN",
+"TRAVEL",
+"LEUSURE",
+"JAZZ AND BLUES",
+"COUNTRY MUSIC",
+"NATIONAL MUSIC",
+"OLDIES MUSIC",
+"FOLK MUSIC",
 "entry 29 not used",
 "entry 30 not used",
 "entry 31 not used"
@@ -1150,7 +1248,7 @@ void	RadioInterface::showSpectrum	(int32_t amount) {
 //
 //	This is a copy of the clearEnsemble, with as difference
 //	that the autoCorrector is ON. We then need clean settings
-void	RadioInterface::autoCorrector_on (void) {
+void	RadioInterface::hard_Reset (void) {
 //	first the real stuff
 	Services		= QStringList ();
 	ensemble. setStringList (Services);
@@ -1171,6 +1269,9 @@ void	RadioInterface::autoCorrector_on (void) {
 	protLevelDisplay	-> display (0);
 	bitRateDisplay		-> display (0);
 	ASCTyDisplay		-> display (0);
+	dynamicLabel		-> setText ("");
+	nameofLanguage	        -> setText ("");
+	programType	        -> setText ("");
 }
 //
 //	When selecting another mode, first ensure that all kinds

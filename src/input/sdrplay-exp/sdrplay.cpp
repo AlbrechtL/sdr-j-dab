@@ -36,11 +36,11 @@
 int	err;
 float	ver;
 
-	sdrplaySettings		= s;
-	this	-> myFrame	= new QFrame (NULL);
+	sdrplaySettings			= s;
+	this	-> myFrame		= new QFrame (NULL);
 	setupUi (this -> myFrame);
 	this	-> myFrame	-> show ();
-	this	-> inputRate	= Khz (2048);
+	this	-> inputRate		= Khz (2048);
 
 	*success		= false;
 	_I_Buffer	= NULL;
@@ -109,18 +109,22 @@ ULONG APIkeyValue_length = 255;
 	_I_Buffer	= new RingBuffer<DSPCOMPLEX>(2 * 1024 * 1024);
 	vfoFrequency	= Khz (94700);
 	currentGain	= DEFAULT_GAIN;
-	vfoOffset	= 0;
 
 	sdrplaySettings		-> beginGroup ("sdrplaySettings");
 	gainSlider 		-> setValue (
 	            sdrplaySettings -> value ("externalGain", 10). toInt ());
+	ppmControl		-> setValue (
+	            sdrplaySettings -> value ("externalPPM", 0). toInt ());
 	sdrplaySettings	-> endGroup ();
 
 	setExternalGain	(gainSlider	-> value ());
+	set_ppmControl  (ppmControl	-> value ());
 	connect (gainSlider, SIGNAL (valueChanged (int)),
 	         this, SLOT (setExternalGain (int)));
 	connect (agcControl, SIGNAL (stateChanged (int)),
 	         this, SLOT (agcControl_toggled (int)));
+	connect (ppmControl, SIGNAL (valueChanged (int)),
+	         this, SLOT (set_ppmControl (int)));
 	running		= false;
 	agcMode		= false;
 	*success	= true;
@@ -129,6 +133,7 @@ ULONG APIkeyValue_length = 255;
 	sdrplay::~sdrplay	(void) {
 	sdrplaySettings	-> beginGroup ("sdrplaySettings");
 	sdrplaySettings	-> setValue ("externalGain", gainSlider -> value ());
+	sdrplaySettings -> setValue ("externalPPM", ppmControl -> value ());
 	sdrplaySettings	-> endGroup ();
 	stopReader ();
 	if (_I_Buffer != NULL)
@@ -138,6 +143,8 @@ ULONG APIkeyValue_length = 255;
 //
 static inline
 int16_t	bankFor_sdr (int32_t freq) {
+	if (freq < 10 * Khz (1))
+	   return -1;
 	if (freq < 12 * MHz (1))
 	   return 1;
 	if (freq < 30 * MHz (1))
@@ -167,21 +174,33 @@ int32_t	sdrplay::defaultFrequency	(void) {
 
 void	sdrplay::setVFOFrequency	(int32_t newFrequency) {
 mir_sdr_ErrT	err;
-int32_t	realFreq = newFrequency + vfoOffset;
 int	gRdBSystem;
 int	samplesPerPacket;
 
-	if (bankFor_sdr (realFreq) == -1)
+	if (bankFor_sdr (newFrequency) == -1)
 	   return;
 
 	if (!running) {
-	   vfoFrequency = newFrequency + vfoOffset;
+	   vfoFrequency = newFrequency;
 	   return;
 	}
 
+	my_mir_sdr_SetPpm ((float)(ppmControl -> value ()));
+	if (bankFor_sdr (newFrequency) == bankFor_sdr (vfoFrequency)) {
+	   fprintf (stderr, "easy route %d %d\n", newFrequency, vfoFrequency);
+	   my_mir_sdr_SetRf (float (newFrequency), 1, 0);
+	   vfoFrequency	= newFrequency;
+	   return;
+	}
+
+	fprintf (stderr, "hard route %d %d\n", newFrequency, vfoFrequency);
+	vfoFrequency	= newFrequency;
+//	stopReader	();
+//	restartReader	();
+
 	err	= my_mir_sdr_Reinit (&currentGain,
 	                             double (inputRate) / Mhz (1),
-	                             double (realFreq) / Mhz (1),
+	                             double (newFrequency) / Mhz (1),
 	                             mir_sdr_BW_1_536,
 	                             mir_sdr_IF_Zero,
 	                             mir_sdr_LO_Undefined,	// LOMode
@@ -195,7 +214,7 @@ int	samplesPerPacket;
 	                                  err, vfoFrequency);
 	}
 	else
-	   vfoFrequency = realFreq;
+	   vfoFrequency = newFrequency;
 }
 
 int32_t	sdrplay::getVFOFrequency	(void) {
@@ -268,13 +287,16 @@ mir_sdr_ErrT	err;
 	                                 (mir_sdr_StreamCallback_t)myStreamCallback,
 	                                 (mir_sdr_GainChangeCallback_t)myGainChangeCallback,
 	                                 this);
-	if (err != mir_sdr_Success)
+	if (err != mir_sdr_Success) {
+	   fprintf (stderr, "error in init %d\n", err);
 	   return false;
+	}
+//	my_mir_sdr_DebugEnable (1);
 
 	err		= my_mir_sdr_SetDcMode (4, 1);
 	err		= my_mir_sdr_SetDcTrackTime (63);
 //
-	my_mir_sdr_SetSyncUpdatePeriod ((int)(inputRate / 2));
+	my_mir_sdr_SetSyncUpdatePeriod ((int)(inputRate / 20));
 	my_mir_sdr_SetSyncUpdateSampleNum (samplesPerPacket);
 //	my_mir_sdr_AgcControl (1, -30, 0, 0, 0, 0, 0);
 	my_mir_sdr_DCoffsetIQimbalanceControl (0, 1);
@@ -410,6 +432,20 @@ bool	sdrplay::loadFunctions	(void) {
 	   return false;
 	}
 
+	my_mir_sdr_SetPpm	= (pfn_mir_sdr_SetPpm)
+	                GETPROCADDRESS (Handle, "mir_sdr_SetPpm");
+	if (my_mir_sdr_SetPpm == NULL) {
+	   fprintf (stderr, "Could not find mir_sdr_SetPpm\n");
+	   return false;
+	}
+
+	my_mir_sdr_DebugEnable	= (pfn_mir_sdr_DebugEnable)
+	                GETPROCADDRESS (Handle, "mir_sdr_DebugEnable");
+	if (my_mir_sdr_DebugEnable == NULL) {
+	   fprintf (stderr, "Could not find mir_sdr_DebugEnable\n");
+	   return false;
+	}
+
 	my_mir_sdr_DCoffsetIQimbalanceControl	=
 	                     (pfn_mir_sdr_DCoffsetIQimbalanceControl)
 	                GETPROCADDRESS (Handle, "mir_sdr_DCoffsetIQimbalanceControl");
@@ -429,5 +465,13 @@ bool	sdrplay::loadFunctions	(void) {
 
 void	sdrplay::agcControl_toggled (int agcMode) {
 	this	-> agcMode	= agcControl -> isChecked ();
+	my_mir_sdr_AgcControl (this -> agcMode, 30, 0, 0, 0, 1, 0);
+	if (agcMode == 0)
+	   my_mir_sdr_SetGr (gainSlider () -> value, 1, 0);
+}
+
+void	sdrplay::set_ppmControl (int ppm) {
+	my_mir_sdr_SetPpm ((float)ppm);
+	my_mir_sdr_SetRf  ((float)vfoFrequency, 1, 0);
 }
 

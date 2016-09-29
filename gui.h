@@ -61,7 +61,7 @@ class	common_fft;
  *	QDialog and the generated form
  */
 class RadioInterface: public QDialog,
-		      private Ui_elektorSDR {
+		      private Ui_sdr_j_dab {
 Q_OBJECT
 public:
 		RadioInterface		(QSettings	*,
@@ -119,13 +119,17 @@ private:
 	int16_t			scopeWidth;
 	QLabel			*pictureLabel;
 	QUdpSocket		DSCTy_59_socket;
+
+	void			Increment_Channel	(void);
+	bool			scanning;
 private slots:
+	void			set_Scanning		(void);
 	void			setStart	(void);
 	void			updateTimeDisplay	(void);
 	void			setScopeWidth		(int);
 
 	void			selectMode		(const QString &);
-	void			autoCorrector_on	(void);
+	void			hard_Reset		(void);
 
 	void			abortSystem		(int);
 	void			TerminateProcess	(void);
@@ -150,6 +154,8 @@ public slots:
 	void			show_snr		(int);
 	void			showIQ			(int);
 	void			setSynced		(char);
+	void			No_Signal_Found		(void);
+	void			Yes_Signal_Found	(void);
 	void			showLabel		(QString);
 	void			showMOT			(QByteArray, int);
 	void			send_datagram		(char *, int);

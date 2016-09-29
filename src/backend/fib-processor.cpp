@@ -883,7 +883,9 @@ char		label [17];
 	            const QString name = toQStringUsingCharset (
 	                                      (const char *) label,
 	                                      (CharacterSet) charSet);
-	            nameofEnsemble (SId, name);
+	            if (firstTime)
+	               nameofEnsemble (SId, name);
+	            firstTime	= false;
 	         }
 	      }
 	      break;
@@ -1156,6 +1158,7 @@ int16_t i;
 	   components [i]. inUse = false;
 	}
 	selectedService	= -1;
+	firstTime	= true;
 }
 
 void	fib_processor::printActions (int16_t ficno) {

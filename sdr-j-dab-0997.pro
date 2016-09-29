@@ -8,12 +8,12 @@ TEMPLATE	= app
 TARGET		= sdr-j-dab-0.997
 QT		+= widgets network
 CONFIG		+= console
-#QMAKE_CFLAGS	+= -flto  -ffast-math
-#QMAKE_CXXFLAGS	+= -flto  -ffast-math
-#QMAKE_LFLAGS	+= -flto 
-QMAKE_CFLAGS	+= -ffast-math -g
-QMAKE_CXXFLAGS	+= -ffast-math -g
-QMAKE_LFLAGS	+= -g
+QMAKE_CFLAGS	+= -flto  -ffast-math
+QMAKE_CXXFLAGS	+= -flto  -ffast-math
+QMAKE_LFLAGS	+= -flto 
+#QMAKE_CFLAGS	+= -ffast-math -g
+#QMAKE_CXXFLAGS	+= -ffast-math -g
+#QMAKE_LFLAGS	+= -g
 #comment this out when you are running/compiling on a machine with sse support
 CONFIG		+= NO_SSE_SUPPORT 
 DEPENDPATH += . \
@@ -162,6 +162,7 @@ SOURCES += ./main.cpp \
 #	listed, just comment the line out.
 unix {
 CONFIG		+= dabstick_osmo
+#CONFIG		+= sdrplay-exp
 CONFIG		+= sdrplay
 CONFIG		+= rtl_tcp
 CONFIG		+= airspy
@@ -170,8 +171,8 @@ DEFINES		+= MOT_BASICS__ 	# use at your own risk
 DEFINES		+= MSC_DATA__		# use at your own risk
 DESTDIR		= ./linux-bin
 INCLUDEPATH	+= /usr/include/qt5/qwt /usr/local/include
-#LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu
-LIBS		+= -lqwt-qt5 -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl  # fedora
+#LIBS		+= -lqwt -lfftw3f   -lusb-1.0 -ldl	 # ubuntu
+LIBS		+= -lqwt-qt5 -lfftw3f  -lusb-1.0 -ldl  # fedora
 LIBS		+= -lportaudio
 LIBS		+= -lsndfile
 LIBS		+= -lz
@@ -237,6 +238,7 @@ dabstick_new {
 	SOURCES		+= ./src/input/dabstick-new/dabstick.cpp \
 	                   ./src/input/dabstick-new/dongleselect.cpp
 	FORMS		+= ./src/input/dabstick-new/dabstick-widget.ui
+	LIBS		+= -lrtlsdr
 }
 
 #	dabstick_osmo
@@ -262,6 +264,14 @@ DEFINES		+= HAVE_SDRPLAY
 	                   ./src/input/sdrplay/sdrplay-loader.cpp \
 	                   ./src/input/sdrplay/sdrplay-worker.cpp 
 	FORMS		+= ./src/input/sdrplay/sdrplay-widget.ui
+}
+#
+sdrplay-exp {
+DEFINES		+= HAVE_SDRPLAY
+	INCLUDEPATH	+= ./src/input/sdrplay-exp
+	HEADERS		+= ./src/input/sdrplay-exp/sdrplay.h 
+	SOURCES		+= ./src/input/sdrplay-exp/sdrplay.cpp 
+	FORMS		+= ./src/input/sdrplay-exp/sdrplay-widget.ui
 }
 #
 # airspy support 

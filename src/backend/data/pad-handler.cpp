@@ -62,6 +62,7 @@ int16_t	count	= theAU [1];
 	   handle_shortPAD (buffer, count);
 	   return;
 	}
+
 	if (x_padInd == 02) {
 	   uint8_t Z_bit		= (buffer [count - 1] & 01);
 	   uint8_t CI_flag		= (buffer [count - 1] >> 1) & 01;
@@ -91,7 +92,7 @@ int16_t	i, j;
 int16_t	base	= count - 2 - 1;	//for the F-pad
 int16_t	length	= 0;
 
-	if (CI_flag == 0)
+	if (CI_flag == 0)	// I do not understand
 	   return;
 //
 //	The CI flag in the F_PAD data is set, so we have local CI's

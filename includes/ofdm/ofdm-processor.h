@@ -65,8 +65,10 @@ public:
 	void	coarseCorrectorOff	(void);
 	void	startDumping		(SNDFILE *);
 	void	stopDumping		(void);
+	void	set_scanMode		(bool);
 private:
 	bool		running;
+	bool		scanMode;
 	uint8_t		freqSyncMethod;
 	int16_t		gain;
 	bool		dumping;
@@ -80,6 +82,7 @@ private:
 	int32_t		T_u;
 	int32_t		T_s;
 	int32_t		T_g;
+	int32_t		T_F;
 	float		sLevel;
 	RadioInterface	*myRadioInterface;
 	DSPCOMPLEX	*oscillatorTable;
@@ -120,6 +123,7 @@ signals:
 	void		show_coarseCorrector	(int);
 	void		show_avgTokenLength	(int);
 	void		setSynced		(char);
+	void		No_Signal_Found		(void);
 };
 #endif
 

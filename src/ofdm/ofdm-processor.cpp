@@ -49,6 +49,7 @@ int32_t	i;
 	this	-> T_s			= p 	-> T_s;
 	this	-> T_u			= p	-> T_u;
 	this	-> T_g			= T_s - T_u;
+	this	-> T_F			= p     -> T_F;
 	this	-> myRadioInterface	= mr;
 	this	-> my_mscHandler	= msc;
 	this	-> my_ficHandler	= fic;
@@ -71,7 +72,7 @@ int32_t	i;
 	                                           freqSyncMethod);
 	fineCorrector		= 0;	
 	coarseCorrector		= 0;
-	f2Correction		= false;
+	f2Correction		= true;
 	oscillatorTable		= new DSPCOMPLEX [INPUT_RATE];
 	localPhase		= 0;
 
@@ -87,6 +88,8 @@ int32_t	i;
 	         myRadioInterface, SLOT (set_avgTokenLengthDisplay (int)));
 	connect (this, SIGNAL (setSynced (char)),
 	         myRadioInterface, SLOT (setSynced (char)));
+	connect (this, SIGNAL (No_Signal_Found (void)),
+	         myRadioInterface, SLOT (No_Signal_Found (void)));
 
 	bufferContent	= 0;
 #ifdef	HAVE_SPECTRUM
@@ -99,6 +102,8 @@ int32_t	i;
 #endif
 //
 //	and we go
+	running		= false;	// set in the task
+	scanMode	= false;
 	start (QThread::TimeCriticalPriority);
 }
 
@@ -246,14 +251,20 @@ DSPCOMPLEX	FreqCorr;
 int32_t		counter;
 float		currentStrength;
 int32_t		syncBufferIndex	= 0;
-int32_t		syncBufferSize	= 10 * T_s;
+int32_t		syncBufferSize	= 32768;
+int32_t		syncBufferMask  = syncBufferSize - 1;
 float		envBuffer	[syncBufferSize];
-float		signalLevel;
+float		signalLevel	= 0;
 int16_t		previous_1	= 1000;
 int16_t		previous_2	= 999;
 int16_t		ibits [2 * params -> K];
+int		attempts	= 0;
 
 	running		= true;
+	bufferContent	= 0;
+	sampleCnt	= 0;
+	
+	my_ficHandler	-> clearEnsemble ();
 	fineCorrector	= 0;
 	sLevel		= 0;
 	try {
@@ -261,14 +272,16 @@ int16_t		ibits [2 * params -> K];
 //
 //	we first fill the buffer
 Initing:
+notSynced:
+	   attempts ++;
 	   syncBufferIndex	= 0;
 	   currentStrength	= 0;
 	   sLevel		= 0;
-	   for (i = 0; i < 10 * T_s; i ++) {
+	   for (i = 0; i < 20 * T_s; i ++) {
 	      (void)jan_abs (getSample (0));	// to build up sLevel
 	   }
+
 //
-notSynced:
 //	read in T_s samples for a next attempt;
 	   syncBufferIndex	= 0;
 	   currentStrength	= 0;
@@ -278,6 +291,7 @@ notSynced:
               currentStrength                   += envBuffer [syncBufferIndex];
               syncBufferIndex ++;
            }
+	
 
 //	we now have initial values for currentStrength and signalLevel
 //	Then we look for a "dip" in the datastream
@@ -290,12 +304,19 @@ SyncOnNull:
 	      envBuffer [syncBufferIndex] = jan_abs (sample);
 //	update the levels
 	      currentStrength += envBuffer [syncBufferIndex] -
-	                      envBuffer [syncBufferIndex - 50];
-	      syncBufferIndex ++;
+	                      envBuffer [(syncBufferIndex - 50) & syncBufferMask];
+	      syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
 	      counter ++;
-	      if (counter > 2 * T_s)	// hopeless
+	      if (counter > T_F) { // hopeless	signal that we give up
+	         if (scanMode && attempts > 5) {
+	            emit (No_Signal_Found ());
+	            attempts = 0;
+	         }
 	         goto notSynced;
+	      }
 	   }
+	   attempts = 0;
+	   counter = 0;
 
 //	Now it is waiting for the end of the dip
 SyncOnEndNull:
@@ -308,11 +329,11 @@ SyncOnEndNull:
 //      smaller than 2 * T_s + T_null, which by itself is
 //      smaller than the bufferSize;
               currentStrength += envBuffer [syncBufferIndex] -
-                                 envBuffer [syncBufferIndex - 50];
-              syncBufferIndex ++;
+                                 envBuffer [(syncBufferIndex - 50) & syncBufferMask];
+              syncBufferIndex = (syncBufferIndex + 1) & syncBufferMask;
               counter   ++;
 //
-	      if (syncBufferIndex > 2 * T_s + T_null)	// hopeless
+	      if (counter > T_null + 50)	// hopeless
 	         goto notSynced;
 	   }
 /**
@@ -447,7 +468,8 @@ OFDM_SYMBOLS:
 	   goto SyncOnPhase;
 	}
 	catch (int e) {
-	   fprintf (stderr, "ofdmProcessor is terminating\n");
+//	   fprintf (stderr, "ofdmProcessor is terminating\n");
+	   ;
 	}
 }
 
@@ -472,7 +494,6 @@ void	ofdmProcessor::startDumping	(SNDFILE *f) {
 void	ofdmProcessor::stopDumping	(void) {
 	dumping = false;
 }
-//
 
 void	ofdmProcessor::coarseCorrectorOn (void) {
 	f2Correction 	= true;
@@ -481,5 +502,9 @@ void	ofdmProcessor::coarseCorrectorOn (void) {
 
 void	ofdmProcessor::coarseCorrectorOff (void) {
 	f2Correction	= false;
+}
+
+void	ofdmProcessor::set_scanMode	(bool b) {
+	scanMode	= b;
 }
 

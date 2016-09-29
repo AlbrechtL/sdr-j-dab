@@ -151,6 +151,7 @@ private:
 	serviceComponent	components [64];
 	serviceId	*listofServices;
 	bool	dateFlag;
+	bool	firstTime;
 signals:
 	void		addEnsembleChar	(char, int);
 	void		addtoEnsemble (const QString &);

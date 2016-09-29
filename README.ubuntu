@@ -1,5 +1,5 @@
 
-UBUNTU 1404  and 1504
+UBUNTU 1404
 
 The software was developed under Fedora (21 and 22). To compile
 under Ubuntu the first culprit is the package portaudio.
@@ -16,14 +16,36 @@ THE QMAKE/MAKE ROUTE
 In the file "sdr-j-dabreceiver-0.99.pro" ensure that the lines
 are commented/uncommented as:
 
-LIBS		+= -lqwt -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl	 # ubuntu
-#LIBS		+= -lqwt-qt5 -lfftw3f  -lrtlsdr  -lusb-1.0 -ldl  # fedora
+INCLUDEPATH     += /usr/include/qt5/qwt /usr/local/include	# fedora
+INCLUDEPATH     += /usr/include/qwt /usr/local/include	# ubuntu 14.04
 
-b. Ubuntu 15.04. Qt5 and qwt6 are available in the regular repositories,
-however, for some unclear reason, the qwt needs
+LIBS		+= -lqwt -lfftw3f  -lusb-1.0 -lzlib -ldl	 # ubuntu
+#LIBS		+= -lqwt-qt5 -lfftw3f  -lusb-1.0 -lzlib -ldl  # fedora
 
-#define	QT_STATIC_CONST
+So: use synaptic or some other tool to download (or ensure that they are
+downloaded) - both libraries and development files 
+1. Qt4, base packages and "-dev" packages
+2. gcc with base utilities, note that you also have to download g++
+3. fftw
+4. libsndfile and libsamplerate
+5. libfaad
+6. libusb-1.0
+7. libz
+8. libfaad
 
-It's definition is available - though commented out - in the file
-"includes/dab-constants.h"
+If you want to use the rtl stick, install rtlsdr lib from the osmocom site
+
+If you want to use the airspy, install the airspy library.
+
+If you have SSE support (most PC type computers), performance gain is
+obtained by commenting out
+#CONFIG          += NO_SSE_SUPPORT
+
+Select devices by commenting or uncommenting
+CONFIG          += dabstick_osmo
+#CONFIG         += sdrplay-exp
+CONFIG          += sdrplay
+CONFIG          += rtl_tcp
+CONFIG          += airspy
+
 

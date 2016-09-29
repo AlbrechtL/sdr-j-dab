@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <author>jan</author>
- <class>elektorSDR</class>
- <widget class="QDialog" name="elektorSDR">
+ <class>sdr_j_dab</class>
+ <widget class="QDialog" name="sdr_j_dab">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -1083,7 +1083,7 @@
     </property>
    </item>
   </widget>
-  <widget class="QPushButton" name="correctorReset">
+  <widget class="QPushButton" name="resetButton">
    <property name="geometry">
     <rect>
      <x>750</x>
@@ -1193,8 +1193,8 @@
   <widget class="QLabel" name="versionName">
    <property name="geometry">
     <rect>
-     <x>600</x>
-     <y>60</y>
+     <x>590</x>
+     <y>80</y>
      <width>151</width>
      <height>21</height>
     </rect>
@@ -1454,6 +1454,19 @@
    </property>
    <property name="segmentStyle">
     <enum>QLCDNumber::Flat</enum>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="scanButton">
+   <property name="geometry">
+    <rect>
+     <x>730</x>
+     <y>40</y>
+     <width>90</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>scan</string>
    </property>
   </widget>
  </widget>
