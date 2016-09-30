@@ -45,7 +45,7 @@ typedef enum {
  * @param charset   character set used in buffer
  * @return converted QString
  */
-QString toQStringUsingCharset(const char* buffer, CharacterSet charset);
+QString toQStringUsingCharset(const char* buffer, CharacterSet charset, int size = -1);
 
 #endif // CHARSETS_H
 

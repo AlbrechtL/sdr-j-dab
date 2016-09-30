@@ -42,7 +42,6 @@ private:
 	void	handle_variablePAD	(uint8_t *, int16_t, uint8_t);
 	void	handle_shortPAD		(uint8_t *, int16_t);
 	void	dynamicLabel		(uint8_t *, int16_t, uint8_t);
-	void	addSegment		(uint16_t, QString);
 	void	add_MSC_element		(uint8_t *, int16_t);
 	void	build_MSC_segment	(uint8_t *, int16_t);
 	bool	pad_crc			(uint8_t *, int16_t);

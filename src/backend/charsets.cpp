@@ -66,27 +66,30 @@ static const unsigned short ebuLatinToUcs2[] = {
 /* 0xf8 - 0xff */ 0xfe,   0x014b, 0x0155, 0x0107, 0x015b, 0x017a, 0x0167, 0xff
 };
 
-QString toQStringUsingCharset (const char* buffer, CharacterSet charset) {
+QString toQStringUsingCharset (const char* buffer, CharacterSet charset, int size) {
 QString s;
 
-	switch (charset) {
-	   case UnicodeUcs2:
-	      s = QString::fromUtf16((const ushort*) buffer);
-	      break;
+    switch (charset) {
+       case UnicodeUcs2:
+          s = QString::fromUtf16((const ushort*) buffer, size);
+          break;
 
-	   case UnicodeUtf8:
-	      s = QString::fromUtf8(buffer);
-	      break;
+       case UnicodeUtf8:
+          s = QString::fromUtf8(buffer, size);
+          break;
 
-	   case EbuLatin:
-	   default:
-	      unsigned int length = strlen(buffer);
-	      s = QString();
-	      for (unsigned int i = 0; i < length; i++) {
-	         s [i] = QChar(ebuLatinToUcs2[((unsigned char*) buffer)[i]]);
-	      }
-	}
+       case EbuLatin:
+       default:
+          unsigned int length = 0;
+          if(size == -1)
+            length = strlen(buffer);
+          else
+            length = size;
+          s = QString();
+          for (unsigned int i = 0; i < length; i++) {
+             s [i] = QChar(ebuLatinToUcs2[((unsigned char*) buffer)[i]]);
+          }
+    }
 
-	return s;
+    return s;
 }
-

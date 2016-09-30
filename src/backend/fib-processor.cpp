@@ -1208,7 +1208,7 @@ int16_t	i, j;
 	      continue;
 
 //	   fprintf (stderr, "we found for %s serviceId %d\n", s. toLatin1 (). data (), 
-	                      listofServices [i]. serviceId);
+//	                      listofServices [i]. serviceId);
 	   selectedService = listofServices [i]. serviceId;
 	   for (j = 0; j < 64; j ++) {
 	      int16_t subchId;

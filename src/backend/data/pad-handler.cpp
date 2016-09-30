@@ -171,76 +171,101 @@ int16_t	length	= 0;
 	   }
 	}
 }
-//
-static bool dynamicLabelActive	= false;
-static QString dynamicLabelSegmentText = QString ("");
-static int16_t segmentLength	= 0;
-static int16_t segmentno = 0;
-static int16_t currentLength	= 0;
 
 //	A dynamic label is created from a sequence of (dynamic) xpad
 //	fields, starting with CI = 2, continuing with CI = 3
-void	padHandler::dynamicLabel (uint8_t *data, int16_t length, uint8_t CI) {
-int16_t	i;
+void	padHandler::dynamicLabel     (uint8_t *data, int16_t length, uint8_t CI) {
+static int16_t segmentno = 0;
+static int16_t remainDataLength = 0;
+int16_t dataLength = 0;
+static bool isLastSegment = false;
+static bool moreXPad = false;
 
-	if ((CI & 037) == 02) {	// start of segment
-	   if (dynamicLabelActive) {
-	      dynamicLabelSegmentText. truncate (segmentLength + 1);
-	      addSegment (segmentno, dynamicLabelSegmentText);
-	   }
+    if ((CI & 037) == 02) {	// start of segment
+       uint16_t prefix = (data [0] << 8) | data [1];
+       uint8_t field_1 = (prefix >> 8) & 017;
+       uint8_t Cflag   = (prefix >> 12) & 01;
+       uint8_t first   = (prefix >> 14) & 01;
+       uint8_t last    = (prefix >> 13) & 01;
+       dataLength = length - 2; // The length is with removed header
 
-	   dynamicLabelSegmentText 	= QString ("");
-	   dynamicLabelActive	= true;
-	   uint16_t prefix	= (data [0] << 8) | data [1];
-	   uint8_t field_1	= (prefix >> 8) & 017;
-	   uint8_t Cflag        = (prefix >> 12) & 01;
-	   uint8_t first        = (prefix >> 14) & 01;
-	   uint8_t last         = (prefix >> 13) & 01;
+       if (first) {
+          segmentno = 1;
+          charSet = (prefix >> 4) & 017;
 
-	   if (first) { 
-	      segmentno = 1;
-	      charSet = (prefix >> 4) & 017;
-	   }
-	   else 
-	      segmentno = (prefix >> 4) & 07;
+          // Clear label because a new label begins
+          dynamicLabelText.clear();
+       }
+       else {
+           segmentno = ((prefix >> 4) & 07) + 1;
+       }
 
-	   if (Cflag)		// not sure, but to be on the safe side
-	      dynamicLabelSegmentText = QString ("");
-	   else { 
-	      segmentLength = field_1;
-	      currentLength = length - 2;
-	   }
+       if (Cflag) // Special dynamic label command
+       {
+          //  The only specified command is to clear the display
+          dynamicLabelText.clear();
+       }
+       else // Dynamic text length
+       {
+           int16_t totalDataLength = field_1 + 1;
+           if(length - 2 < totalDataLength)
+           {
+               dataLength = length - 2; // The length is with removed header
+               moreXPad = true;
+           }
+           else
+           {
+               dataLength = totalDataLength; // No more xpad application 3
+               moreXPad = false;
+           }
 
-	   QString help = toQStringUsingCharset (
-	                        (const char *) &data [2],
-	                           (CharacterSet) charSet);
-	   dynamicLabelSegmentText. append (help);
-	}
-	else
-	if (((CI & 037) == 03) && dynamicLabelActive) {	
-	   QString help = toQStringUsingCharset (
-	                        (const char *) data,
-	                           (CharacterSet) charSet);
-	   dynamicLabelSegmentText. append (help);
-	   currentLength += length;
-	}
-	else
-	   dynamicLabelActive = false;
-}
-//
-//	The dynamic label segments are concatenated
-static
-int recentSegment = 0;
-void	padHandler::addSegment (uint16_t segmentno, QString s) {
+           // Convert dynamic label
+           QString segmentText = toQStringUsingCharset (
+                                (const char *) &data [2],
+                                (CharacterSet) charSet,
+                                dataLength);
 
-	if (segmentno == 1)
-	   s. prepend (' ');
+           dynamicLabelText.append(segmentText);
 
-	if (dynamicLabelText. length () + s. length () > 50)
-	   dynamicLabelText. remove (1, dynamicLabelText. length () + s. length () - 50);
-	dynamicLabelText. append (s);
-	showLabel (dynamicLabelText);
-	recentSegment = segmentno;
+           // The dynamic label transmissions end so show it
+           if(last)
+           {
+               if(!moreXPad)
+                   showLabel (dynamicLabelText);
+               else
+
+               isLastSegment = true;
+           }
+           else
+               isLastSegment = false;
+
+           // Calc remaining data length
+           remainDataLength = totalDataLength - dataLength; // field 1 holds the total data length
+       }
+    }
+    else
+        if (((CI & 037) == 03) && moreXPad) {
+
+           if(remainDataLength > length)
+           {
+               dataLength = length;
+               remainDataLength -= length;
+           }
+           else
+           {
+               dataLength = remainDataLength;
+               moreXPad = false;
+           }
+
+           QString segmentText = toQStringUsingCharset (
+                                (const char *) data,
+                                (CharacterSet) charSet,
+                                dataLength);
+           dynamicLabelText.append(segmentText);
+
+           if(!moreXPad && isLastSegment)
+               showLabel (dynamicLabelText);
+        }
 }
 //
 //
